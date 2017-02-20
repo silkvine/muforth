@@ -5,19 +5,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
-<meta name="description" content="muFORTH is a simple and fast indirect-threaded Forth that is written in C, self-bootstrapping, and BSD-licensed. It is designed to be used as a cross-compiler for microcontrollers but is truly general-purpose. It runs on Linux, OSX, and BSD." />
+<meta name="description" content="muforth is a simple and fast indirect-threaded Forth that is written in C, self-bootstrapping, and BSD-licensed. It is designed to be used as a cross-compiler for microcontrollers but is truly general-purpose. It runs on Linux, OSX, and BSD." />
 <meta name="keywords" content="forth, muforth, meta-compiler, cross-compiler, threaded code, indirect threaded code, ITC, DTC, compiler, bootstrap, bootstrapping, Linux, OSX, FreeBSD, NetBSD, OpenBSD" />
 <meta name="robots" content="index,follow" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="/-/screen.css" type="text/css" />
 <link rel="canonical" href="http://muforth.nimblemachines.com/" />
-<title>muforth: a simple ITC Forth &ndash; muFORTH</title>
+<title>muforth: a simple ITC Forth &ndash; muforth</title>
 
 <script type="application/ld+json">
 {
     "@context": "http://schema.org",
     "@type": "WebSite",
-    "name": "muFORTH",
+    "name": "muforth",
     "url": "http://muforth.nimblemachines.com/",
     "potentialAction": {
         "@type": "SearchAction",
@@ -42,12 +42,12 @@
 <p>One of the primary reasons for writing muforth was to replace the very unportable Linux-specific Forth &ndash; dforth &ndash; that I had been using to do target compilation (for embedded control applications). I&rsquo;m <em>very</em> interested in writing target compilers hosted on muforth, and have partial support for <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v5/">ARM7</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v7-m/">ARM Cortex-M</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/AVR/">Atmel AVR</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/MSP430/">TI MSP430</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/HC08/">Freescale HCS08</a>, and <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/PIC18/">Microchip PIC18</a>. None of these compilers is complete, however.</p>
 <h2 id="get-the-source"><a href="#get-the-source">Get the source</a></h2>
 <p>The code is hosted at <a href="http://github.com/nimblemachines/muforth/tree/master/">Github</a>. It&rsquo;s super easy to build; just look at <a href="https://github.com/nimblemachines/muforth/blob/master/BUILDING">BUILDING</a>.</p>
-<p>It&rsquo;s <a href="https://github.com/nimblemachines/muforth/blob/master/LICENSE">BSD licensed</a>, so do what you want with it! I&rsquo;d love to <a href="mailto:%6d%75%66%6f%72%74%68%2b%75%73%65%73%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear about innovative or unusual uses</a> of muforth.</p>
+<p>It&rsquo;s <a href="https://github.com/nimblemachines/muforth/blob/master/LICENSE">BSD licensed</a>, so do what you want with it! I&rsquo;d love to <a href="mailto:%6d%75%66%6f%72%74%68%2b%75%73%65%73%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear about innovative or unusual uses</a> of muforth.</p>
 <h2 id="documentation"><a href="#documentation">Documentation</a></h2>
 <p>The <a href="/readme/">README</a> &ndash; though outdated in some ways &ndash; is a good introduction to why I wrote muforth and what I was trying to achieve. It describes the native-code compiler version of the system. That, and a few other things &ndash; notably create/does, the tokeniser, and the <em>lack</em> of tail-recursion in the threaded version &ndash; have changed since the <a href="/readme/">README</a> was written, but much of it is still true, applicable, and hopefully of interest.</p>
 <p>The code &ndash; both the <a href="https://github.com/nimblemachines/muforth/tree/master/src/">C code that implements the Forth virtual machine</a> and the <a href="https://github.com/nimblemachines/muforth/tree/master/mu/">muforth code that does everything else</a> &ndash; is carefully and in some cases extensively (even obsessively!) commented. Right now your best source of documentation is the code! Luckily for you, there isn&rsquo;t that much, so reading it is actually possible. That&rsquo;s part of the point of muforth; I want it to be a <a href="http://www.nimblemachines.com/convivial-tool/">convivial tool</a>.</p>
 <p>The key to the system is the Forth code that muforth reads when it first starts: <a href="https://github.com/nimblemachines/muforth/blob/master/mu/startup.mu4">startup.mu4</a>. You&rsquo;ll learn a <em>lot</em> by reading this!</p>
-<p><strong>NOTE:</strong> The state of muforth&rsquo;s documentation will get much better! Especially if I <a href="mailto:%6d%75%66%6f%72%74%68%2b%64%6f%63%75%6d%65%6e%74%61%74%69%6f%6e%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear feedback</a> about how terrible it is. ;-)</p>
+<p><strong>NOTE:</strong> The state of muforth&rsquo;s documentation will get much better! Especially if I <a href="mailto:%6d%75%66%6f%72%74%68%2b%64%6f%63%75%6d%65%6e%74%61%74%69%6f%6e%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear feedback</a> about how terrible it is. ;-)</p>
 <h2 id="news-and-history"><a href="#news-and-history">News and history</a></h2>
 <p>I&rsquo;m starting a new blog, and I&rsquo;ve also rescued my old posts from Blogger and archived them here.</p>
 <ul>
@@ -67,7 +67,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%20muforth%3a%20a%20simple%20ITC%20Forth">Send feedback</a> on this page (last edited 2016 October 04 14:23)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">Send feedback</a> on this page (last edited 2016 October 04 14:23)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
 </div>
 
