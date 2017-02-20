@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/readme/" />
+<title>README &ndash; muFORTH</title>
+</head>
+<body>
+
+<div id="header">
+<h1>README</h1>
+<hr />
+</div>
+
+<div id="content">
+<div class="voice2">
+<p><em>This file is out of date. It describes an earlier version of <a href="/">muFORTH</a>, based on a simple native-code compiler for the Intel x86 architecture. Some of the ideas live on in the current, threaded version, so it&rsquo;s still worth reading.</em></p>
+</div>
+<hr />
+<h2 id="why-muforth"><a href="#why-muforth">Why muforth?</a></h2>
+<p>Why write another Forth when there are so many around? Because everyone else&rsquo;s Forth is wrong. ;-)</p>
+<p>First of all, muforth is most emphatically <em>not</em> ANS-compatible. It would be silly to write another when there are perfectly good ones available. I wanted instead to build a Forth with specific features, several of which are shamelessly stolen from Chuck Moore&rsquo;s <a href="http://colorforth.com/">colorforth</a>.</p>
+<p>I think I started with the question, &ldquo;What would colorforth look like without color?&rdquo; and went from there. I wanted a substrate for experiments, a good metacompiler, and something small and simple.</p>
+<h2 id="why-the-name"><a href="#why-the-name">Why the name?</a></h2>
+<p>From startup.mu4:</p>
+<blockquote><p>The idea is to move as much code as possible <em>out</em> of the Forth kernel. Hence the name: &ldquo;mu&rdquo; is the Greek letter often used in engineering to represent &ldquo;micro&rdquo;. I had called it &ldquo;nu&rdquo; Forth, because it was new, but I like this nu Greek letter better.</p></blockquote>
+<h2 id="why-another-forth"><a href="#why-another-forth">Why another Forth?</a></h2>
+<p>In other words, why not keep using dforth, an earlier Linux Forth I wrote that I have used successfully on several projects?</p>
+<p>dforth has some qualities that I now construe as defects. dforth</p>
+<ul>
+<li>is written entirely in x86 assembler;</li>
+<li>traps into the Linux kernel directly, eschewing the C library;</li>
+<li>is implemented via indirect-threaded code (ITC), an elegant technique, but I was interested in exploring alternatives;</li>
+<li>is a very big kernel, with lots of task-specific code</li>
+</ul>
+<p>I wanted to go the other way. My desiderata included the following:</p>
+<ul>
+<li>a kernel, written in C, that is the smallest possible kernel capable of compiling Forth colon definitions (ie, it is self- bootstrapping);</li>
+<li>a simple native-code compiler;</li>
+<li>a tail-recursive implementation;</li>
+<li>a new parser, tokenizer, and interpreter</li>
+<li>colorforth&rsquo;s terseness but implemented without color and without reinventing the OS.</li>
+</ul>
+<h2 id="map-of-the-territory"><a href="#map-of-the-territory">Map of the territory</a></h2>
+<p>The following sections are not really in any order. Some lead into the next one. Some are just the thing I thought of next as I was writing. In any case, if you get bored reading one section, just skip to the next one. It&rsquo;s bound to be more interesting!</p>
+<h2 id="written-in-c"><a href="#written-in-c">Written in C</a></h2>
+<p>muforth is written in C. This was a hard decision, and involved some difficult tradeoffs.</p>
+<p>When implementing dforth, I initially wanted to write it in C; but I was also committed to doing an ITC Forth, and doing that in C I found to be very clumsy. I bit the bullet and wrote in assembler, which was quite liberating. The only real downside was the frustration of using m4 as a macro processor &ndash; I needed more than the C preprocessor could give me, but I grew to <em>hate</em> m4. I found using it to be a case of programming by trial-and-error, rather than something on which I could bring knowledge and experience to bear.</p>
+<p>This time around I was willing to give on a few things in order to be able to write in C.</p>
+<p>Of course, muforth is far from architecture-neutral, as it contains a native code compiler that compiles little chunks of x86 machine code. This would need to be changed to run on other architectures. I tried to keep it simple, so this shouldn&rsquo;t be hard. A few hours&rsquo; work, perhaps, once you understand the structure of muforth.</p>
+<p>There are several places where writing in C involved compromise or cleverness; I&rsquo;ll try to talk about them in their structural context. The main concerns:</p>
+<ul>
+<li>calling C from Forth;</li>
+<li>length-prefixed Forth-style strings vs zero-terminated C strings;</li>
+<li>code generation inefficiencies forced on me by gcc (no register globals)</li>
+</ul>
+<p>Since I wanted to be able to write, in C, several utility routines that I to call from Forth, I decided to write much of the kernel of muforth using a Forth calling convention. I wrote such &ldquo;shareable&rdquo; words as functions with void arguments returning void, and they &ldquo;manually&rdquo; get parameters from, and push their results onto, the Forth stack &ndash; which is simply a C array of ints.</p>
+<p>Any routine that uses the Forth stack (rather than the C stack) in this way has its name prefixed by &ldquo;mu_&rdquo;. By putting an entry for a &ldquo;mu_&rdquo; function in one of the arrays that fill the initial dictionary chains for <code class="forth">.forth.</code> and <code class="forth">.compiler.</code> it is possible to call the function as a word from Forth.</p>
+<p>By doing things this way I was able to write, only once and in C, words that otherwise I would have to rewrite in Forth. I wanted to avoid such an error-prone and ugly approach; the cost that I paid was to be forced to generate crappy native code, since the C compiler dictated my use of registers, and in particular refused to allow me to put important global variables in registers.</p>
+<p>Another side effect of this decision is that any code that calls into the C library needs to act like a glue function between the two stacks. There are some examples of this in tty.c and time.c. It&rsquo;s pretty simple &ndash; a routine simply moves values between the two stacks as needed. Since the return stack is shared, and since there is no &ldquo;execution engine&rdquo; that needs to be fired up on re-entry to Forth &ndash; unlike a threaded Forth, which requires this &ndash; the only &ldquo;stack convention&rdquo; to worry about making sure the right values get moved between the two stacks.</p>
+<p>The only place in the code that needs to &ldquo;worry&rdquo; about calling conventions is the native compiler code. It needs to know, in particular, which registers the C compiler treats as caller-saved, and which callee-saved, so it can generate code that won&rsquo;t clobber any of its caller&rsquo;s values, and, likewise, that its caller won&rsquo;t clobber. I determined this largely through a trial-and-error process of writing useless and bizarre C code that consumed lots of registers and made lots of calls, but didn&rsquo;t do anything, and then looking at the assembler output generated by the C compiler. Because C and Forth can call each other &ldquo;seamlessly&rdquo;, my code had to play nicely with C&rsquo;s ideas about register usage.</p>
+<h2 id="oddities-and-idiosyncrasies"><a href="#oddities-and-idiosyncrasies">Oddities and idiosyncrasies</a></h2>
+<p>muforth has many differences from more conventional (old-school?) Forths. As I said, it&rsquo;s emphatically <em>not</em> ANS-compatible. Instead I tried to choose and use the best ideas I could find. Many of them are, perhaps not surprisingly, from two Forths written by Chuck Moore: cmFORTH (for the Novix chip) and colorforth (for the x86 PC).</p>
+<p>Though I&rsquo;ve chosen to be intentionally incompatible, I haven&rsquo;t done so to be difficult or contrarian, but instead because being compatible would have forced me to give up much of what I wanted to accomplish.</p>
+<h2 id="ideas-from-cmforth"><a href="#ideas-from-cmforth">Ideas from cmFORTH</a></h2>
+<p>cmFORTH&rsquo;s main innovation, in my view, was to get rid of IMMEDIATE words. As any Forth old-timer knows, IMMEDIATE words are executed at compile time. But they are also executed at &ldquo;interpret&rdquo; time, which causes no end of trouble and leads to horrendously strained games being played with the names of words.</p>
+<p>Instead of IMMEDIATE words, cmFORTH has an entirely separate set of words in the dictionary. There are two sets &ndash; I call them &ldquo;chains&rdquo; &ndash; forth and compiler. The compiler words play the role of IMMEDIATE words in cmFORTH and muforth.</p>
+<p>In fact, the same idea exists in colorforth, but Chuck changed the names. There is a lot more explanation of this in the section on the dictionary.</p>
+<p>Since you need a way to force the compilation, rather than execution, of compiler words, Chuck defined the word <code class="forth">\</code> that searches in the compiler chain for a token, compiles it if found, and complains if not found.</p>
+<p>I call this word <code class="forth">\c</code> (compile from compiler chain); and I define <code class="forth">\</code> to be more like ANS&rsquo;s POSTPONE. There is much more explanation of this in the section on the funny compiler word called <code class="forth">\</code>.</p>
+<h2 id="ideas-from-colorforth"><a href="#ideas-from-colorforth">Ideas from colorforth</a></h2>
+<p>In colorforth the color of a word specifies what the interpreter should do with it. Red means define a new word; the token in red is the name of the new word. Yellow means execute; green means compile. There are some other colors as well, but for our discussion these are the most interesting.</p>
+<p>In order to be able to calculate constants inside a colon definition, you need only switch to yellow, do the calculation, and then switch back to green. At the yellow-to-green transition the compiler generates a literal with the value of the calculation done by the yellow words.</p>
+<p>How was this done &ldquo;traditionally&rdquo;? Like this:</p>
+<pre>
+  : blog  [ 25 80 * ] literal + ;
+</pre>
+<p>The word <code class="forth">literal</code> is a compiler word, which gets executed at compile time; it compiles a literal from the value on the top of the stack &ndash; in this case, the result of 25 80 *.</p>
+<p>But that <code class="forth">literal</code> is ugly. In colorforth it goes away. I wanted to make it go away in muforth as well. So what did I do? I made <code class="forth">]</code> <em>always</em> generate a literal. If you need to jump out of the compiler (using <code class="forth">[</code>), do something, and then jump back, you can use <code class="forth">-]</code>. It doesn&rsquo;t create a literal.</p>
+<p>Our example above becomes</p>
+<pre>
+  : blog  [ 25 80 * ] + ;
+</pre>
+<p>which is much nicer. A few neat examples, from startup.mu4:</p>
+<pre>
+  : 0   [ dup dup xor ] ;
+  : -1  [ 0 invert ] ;
+  : 1   [ -1 negate ] ;
+</pre>
+<p>A side effect is that <code class="forth">literal</code> is no longer a compiler word. Instead of being used inside normal Forth words to compile literals, it is instead used inside compiler words, but is itself a normal Forth word. In both cases it runs at compile time, but the mechanism has changed &ndash; it now finds itself inside compiler words instead of being one itself.</p>
+<p>Since there isn&rsquo;t really any compiler &ldquo;state&rdquo; in colorforth &ndash; each word tells the interpreter, by its color, how to treat it &ndash; there is no need to bracket definitions with <code class="forth">:</code> and <code class="forth">;</code>. A red word marks the start of a new definition; nothing really marks the end. In fact, it&rsquo;s possible, in colorforth, to write a word whose execution &ldquo;falls thru&rdquo; into the next word. This is considered bad style by some, but assembler programmers over the years have used it to great advantage. colorforth gives you this option. (Heh heh. So does muforth.)</p>
+<p>If we don&rsquo;t need to mark the start and end of a word with <code class="forth">:</code> and <code class="forth">;</code>, why is there a word called <code class="forth">;</code> in colorforth? What does it do? It exits from, or returns from, the current word, but without it any way marking it as &ldquo;done&rdquo;. It is like <code class="forth">EXIT</code> in more traditional Forths.</p>
+<p>I coveted these qualities for muforth, but had the constraint that my compiler <em>does</em> have state, and does switch back and forth between interpreting and compiling. So I need <code class="forth">;</code> to end my words, like it always has. So I needed two new words:</p>
+<ul>
+<li>to exit a word &ldquo;prematurely&rdquo;;</li>
+<li>to end a word, but &ldquo;fall thru&rdquo; to the next word.</li>
+</ul>
+<p>The first I called <code class="forth">^</code> to capture the idea of jumping up out of the word. The second I already had. It&rsquo;s called <code class="forth">[</code>, and is used, as explained above, to &ldquo;temporarily&rdquo; exit the compiler so that we can do a calculation or something. Great! That&rsquo;s all we need. Since we do not smudge or hide newly defined words, the only action that needs to be taken to exit the compiler is to switch from compile to interpret state. This is exactly what <code class="forth">[</code> does: it stops the compiler, but doesn&rsquo;t compile a &ldquo;return&rdquo; (or convert a tail-call to a jump).</p>
+<p>Then there is the usual <code class="forth">;</code> which does both these things. In fact, it simply calls one (<code class="forth">^</code>) and then the other (<code class="forth">[</code>). Its definition is basically:</p>
+<pre>
+  compiler
+  : ;  \ ^  \ [  ;
+</pre>
+<p>where <code class="forth">\</code> is used to force the compilation of a compiler word.</p>
+<p>colorforth has the oddball feature that <code class="forth">if</code> leaves the top of stack intact. This can be useful or annoying. I thought it would be interesting to have <em>both</em> options &ndash; destructive and non- &ndash; so I defined <code class="forth">=if</code> and <code class="forth">=while</code> in addition to <code class="forth">if</code> and <code class="forth">while</code>. <code class="forth">if</code> and <code class="forth">while</code> consume the top of stack; <code class="forth">=if</code> and <code class="forth">=while</code> leave it alone.</p>
+<p>And, just as in colorforth, there is no <code class="forth">else</code> in muforth! You can always get by without it, and often the code factoring improves. For example, you can rewrite</p>
+<pre>
+  &lt;test> if  a  else  b  then  c ;
+</pre>
+<p>as</p>
+<pre>
+  &lt;test> if  a c ^  then  b c ;
+</pre>
+<p>colorforth doesn&rsquo;t &ldquo;smudge&rdquo; (hide) new definitions until they are complete &ndash; and neither does muforth. This makes writing recursive definitions easy, but makes redefinition harder (you have to rename the old function first).</p>
+<p>colorforth lacks the looping words <code class="forth">begin</code>, <code class="forth">while</code>, <code class="forth">until</code>, and <code class="forth">repeat</code>. (It retains <code class="forth">for</code> and <code class="forth">next</code>.) In colorforth, to write a loop, you simply &ldquo;call&rdquo; a word from within itself. For this to work, colorforth has to be tail-recursive. So muforth is as well. I liked the idea of being able to write iterations as syntactically recursive procedures, as in Lisp; however, I haven&rsquo;t used it much. ;-) See the section on the joy of tail-recursion for more details.</p>
+<h2 id="numbers"><a href="#numbers">Numbers</a></h2>
+<p>As part of my effort to strip everything out of the kernel of muforth that is not necessary for bootstrapping &ndash; keeping only what is necessary to make colon definitions &ndash; I stripped number parsing, number formatting, and most i/o out of the kernel.</p>
+<p>There aren&rsquo;t even any constants defined in muforth! I calculate them, starting with 0, in startup.mu4. From there I get some basic constants I need for deciding if a character is a digit, and at that point I can write the number parsing code.</p>
+<p>The number parsing code has some flaws, and isn&rsquo;t that different from what you&rsquo;d find in F83 or an ANS Forth. The main thing I added was radix prefixes. Even though you&rsquo;re in, say, hex, you can enter a number in any of 4 radices by prefixing it with a single character:</p>
+<pre>
+  "  -> hex
+  '  -> octal
+  #  -> decimal
+  %  -> binary
+</pre>
+<p>This can be a great headache saver.</p>
+<h2 id="forgetting"><a href="#forgetting">Forgetting</a></h2>
+<p>muforth is like an elephant; it never forgets. ;-)</p>
+<p>muforth does not define the common Forth word <code class="forth">forget</code>, nor does it define <code class="forth">empty</code>, as colorforth does. In the presence of deferred words, any kind of <code class="forth">forget</code> is error-prone. I find it better to quit and reload. This has never bothered me, or felt limiting in any way. And it certainly makes memory allocation easier. ;-)</p>
+<h2 id="strings"><a href="#strings">Strings</a></h2>
+<p>I struggled with how to define and use strings in muforth. I <em>really like</em> length-prefixed strings, but using them with C is a pain. After several false starts I arrived at a simple structure for strings that solves not only the problem of C compatibility, but a host of other problems related to having strings &ldquo;inline&rdquo; with code &ndash; the traditional Forth way.</p>
+<p>Since muforth is intended to run on modern machines with lots of caches, it seemed important to separate code and data. This affects not only strings but also create/does>. I&rsquo;ll talk about create/does> in a later section.</p>
+<p>Except in a few places &ndash; <code class="forth">throw</code> comes to mind &ndash; a string in muforth is represented on the stack by a tuple: (start, length). start points to the first character; length is the count of characters. The string may or may not be zero-terminated; no muforth code depends on the presence of such termination.</p>
+<p>But what about saving strings for later use? Now we have to have a structure for strings in memory, and we&rsquo;d like it to be C compatible, since maybe the muforth word we&rsquo;re calling is going to call into the C library. Maybe we&rsquo;re opening a file by name.</p>
+<p>My conclusion was to compile the tuple</p>
+<pre>
+  (length, string, termination, padding).
+</pre>
+<p>length is a cell-sized count, so very large compiled strings are possible. string is an array of the characters. termination is a single null character &ndash; always present in compiled strings! And padding gets us to a cell boundary.</p>
+<p>Note that it&rsquo;s possible to &ldquo;compile&rdquo; a string but not allot the space for it. This is useful for temporary strings that need to be zero-terminated, such as filenames to be passed down into the C library. Unfortunately it&rsquo;s easy to clobber the string thusly compiled. I used to have &ldquo;ld&rdquo; use a compiled but not alloted string; now it allots it too, so even &ldquo;temporary&rdquo; filename strings use up data space. Oh well. ^C, up-arrow, return. ;-)</p>
+<p>Unlike traditional Forths, I compile the string into &ldquo;data&rdquo; space, not code space. Then I compile a literal that at runtime pushes the address, not of length, but of string. This way I can easily pass it to C code, and I can just as easily convert it to a canonical muforth (start, length) string by executing count:</p>
+<pre>
+  : count  ( z" - a u)  dup  cell- @ ;
+</pre>
+<p>z&rdquo; here is a mnemonic for zero-terminated, length-prefixed, compiled string.</p>
+<p>One of my subgoals with muforth was to have only one kind of literal. Forths traditionally have had several different kinds of string literals, all of them inline (thereby possibly causing cache problems by mixing code with data) and therefore requiring strange and convoluted code to &ldquo;jump over&rdquo; the inline string in order to continue execution. By converting string literals to ordinary literals, lots of problems go away, and the use of strings now becomes neatly postfix as well. If I want a literaled compiled string to push (start, length) I simply follow the literal with a call to count. Look for &ldquo;string,&rdquo; in startup.mu4 and you&rsquo;ll see how it all works.</p>
+<p>Note also that this kind of literal can be used for any arbitrary data structure, not just strings; it defines a <strong>universal literal</strong>. What is a clump of data but a (start, length) tuple? You can compile any kind of data this way, make a literal of it as a counted string, and then call code that knows how to pull bits out of it and do something with them.</p>
+<h2 id="digression-about-tokenizing-strings-and-suffixes"><a href="#digression-about-tokenizing-strings-and-suffixes">Digression about tokenizing, strings and suffixes</a></h2>
+<p>Before digging into the interesting details about how muforth&rsquo;s tokenizer works I want to make a digression that I hope will shed some light on the odd data structure that I use to capture the state of the tokenizer. I should say that these ideas came <em>after</em> I had settled on the structure and written the code &ndash; long after. I wanted to find a &ldquo;formal&rdquo; (or semi-formal ;-) explanation of the data structure and why it is well-suited to tokenizing. While walking today, I think I found it.</p>
+<p>Think about what a tokenizer does. It looks at a string, a character at a time, classifying each character as a delimiter or token character. Its job is to (possibly) skip leading delimiters, collect a sequence of token characters, and (possibly) consume the delimiter following the last token character. It returns a (start, length) string representing the token. Then it somehow &ldquo;remembers&rdquo; which characters it has seen, so that the next time it gets called it will skip over them, rather than starting over at the start of the string.</p>
+<p>It peels a character off the front, does something with it, and sets aside the rest. At the lowest level, then, a tokenizer looks at successively shorter suffixes of its input string. This is the main insight that leads to our data structure. But before we get there, let&rsquo;s look at what is commonly done.</p>
+<p>Almost all Forths represent the string to be tokenized as a (start, length) tuple, and the count of characters already consumed by the tokenizer as an offset, commonly called <code class="forth">>in</code>. When <code class="forth">>in</code> is zero, we have consumed none of the string; when <code class="forth">>in</code> == length, we have consumed the entire string. If we think of <code class="forth">>in</code> as the length of the <em>prefix</em> of the string already consumed, then (length &ndash; <code class="forth">>in</code>) is the length of the suffix <em>yet</em> to be consumed. (Invariant: len(prefix) + len(suffix) == length.)</p>
+<p>We should note that using (start, length) to represent successive suffixes is clumsy. Here are a few such successive suffixes:</p>
+<pre>
+  (start, length)          the whole string
+  (start + 1, length - 1)  .. minus the first character
+  (start + 2, length - 2)  .. minus the first two characters
+  ...
+  (start + length, 0)      the empty suffix
+</pre>
+<p>For each successive suffix, as <code class="forth">>in</code> goes from zero to length, it is added to start, and subtracted from length.</p>
+<p>If we were looking at successive prefixes this would be a great way to represent things;</p>
+<pre>
+  (start, length)          the whole string
+  (start, length - 1)      .. minus the last character
+  (start, length - 2)      .. minus the last two characters
+  ...
+  (start, 0)               the empty prefix
+</pre>
+<p>But that&rsquo;s <em>not</em> what a tokenizer does, so why use this representation? (I&rsquo;ve heard that at least one Algol 60 compiler read its input backwards, which somehow made parsing easier and more elegant. In that situation some variant of this successive prefixes method might nicely apply.)</p>
+<p>Why not instead put our anchor point at the <em>end</em>, which is the same for all suffixes of the original string? Then we would represent the start of the suffix as an offset from the end, like this (setting end = start + length):</p>
+<pre>
+  (end, -length)          the whole string
+  (end, -length + 1)      .. minus the first character
+  (end, -length + 2)      .. minus the first two characters
+  ...
+  (end, 0)               the empty suffix
+</pre>
+<p>Note that only the second one part of the tuple is changing. This should be a clue that this representation is a better match for suffixing than (start, length). In fact, if we compare this representation of suffixes with using (start, length) to represent successive <em>prefixes</em>, we see that they are <em>duals</em> of each other. In both cases only the second part of the tuple changes; the anchor remains the same. The second part goes from either length to zero (prefix) or -length to zero (suffix).</p>
+<p>Practically this means that there is less work to do on each call to the tokenizer, since we already know which part of the text we&rsquo;ve seen (the prefix that we&rsquo;ve &ldquo;thrown away&rdquo;), and less work to do for each character, since we are only changing (and checking for exhaustion) one part of our data structure.</p>
+<p>With that introduction, we are ready for...</p>
+<h2 id="tokenizing-the-input"><a href="#tokenizing-the-input">Tokenizing the input</a></h2>
+<p>This is one of the cool innovations in muforth.</p>
+<p>In muforth I define a notional string type, called &ldquo;text&rdquo;, that is better suited than normal (start, length) strings to tokenizing. I say &ldquo;notional&rdquo; because it never shows up in the language, only in the C implementation. A text is something a bit odd. I&rsquo;ll explain.</p>
+<p>I discovered, in writing the tokenizer for dforth, that using a string (start, length) and an offset (past what we have seen already) was clumsy and slow. This is what Forths have traditionally done. The state of the interpreter is captured by two variables: <code class="forth">source</code> and <code class="forth">>in</code>. <code class="forth">source</code> is a double variable containing a pointer to the first character, and a length &ndash; a normal string. <code class="forth">>in</code> is an offset <em>past</em> the characters that we&rsquo;ve looked at already, in previous calls to the tokenizer.</p>
+<p>On every call to the tokenizer you first have to offset the pointer forward (by <code class="forth">>in</code>), past the text you&rsquo;ve seen already, and the count backwards (also by <code class="forth">>in</code>), since it counts characters yet to be seen. You&rsquo;re always offsetting two things. Even when consuming a single character during scanning you have to increment the pointer, and decrement the count. Two operations. Clumsy.</p>
+<p>Instead, I thought, why not run everything backwards?</p>
+<p>If a string is represented by the tuple</p>
+<pre>
+  (start, length)
+</pre>
+<p>then a text describing the same sequence of bytes in memory could be represented by the tuple</p>
+<pre>
+  (end, -length), where end = address + length.
+</pre>
+<p>The type &ldquo;text&rdquo; consists of a pointer just past the <em>end</em> of the text, and a negative offset from the end back to the start. When we start tokenizing a chunk of text, we set a global variable called <code class="forth">first</code> to &ldquo;point&rdquo; to the first character. But <code class="forth">first</code> is really a negative offset from the <em>end</em> of the text.</p>
+<p>In this scenario, the current state of the tokenizer is captured in two variables: <code class="forth">source</code> (a <em>text</em>), and <code class="forth">first</code>, an offset running from -length up to 0.</p>
+<p>On each call to the tokenizer, <code class="forth">first</code> already points <em>past</em> the the text we&rsquo;ve seen already, so we&rsquo;re ready to start looking for a new token. Now might perhaps be a good time to mention a little secret: muforth has <em>two</em> tokenizers. One &ndash; <code class="forth">token</code> &ndash; assumes that tokens are separated by whitespace, and skips <em>leading</em> whitespace. The other &ndash; <code class="forth">parse</code> &ndash; takes a delimiter character and scans for a <em>trailing</em> delimiter, but assumes that the new token starts at <code class="forth">first</code> &ndash; it does <em>not</em> try to skip any leading delimiters.</p>
+<p>Here are the details of how this works. Let&rsquo;s assume we&rsquo;ve called <code class="forth">token</code>, and we&rsquo;re going to skip leading whitespace. <code class="forth">first</code> &ldquo;points&rdquo; to the first character that we haven&rsquo;t seen yet. So, while the character at <code class="forth">first</code> is whitespace and <code class="forth">first</code> &lt; 0 (not at the end of the text), increment <code class="forth">first</code>. Now either we&rsquo;ve run out of text, or we&rsquo;ve found a non-whitespace character. Either way, this is the first character of our token.</p>
+<p>We leave <code class="forth">first</code> pointing to it, set <code class="forth">last</code> = <code class="forth">first</code>, and then start scanning with <code class="forth">last</code>, incrementing it as long as it points to a non-whitespace character and remains &lt; 0. When we reach the end of the token, which happens either if we find a trailing delimiter, or if we run out of text to scan, <code class="forth">last</code> is left pointing just <em>past</em> the last character of the token.</p>
+<p>Another way of thinking about this is that we either run out of input text (trailing = 0), or we &ldquo;consume&rdquo; a single trailing delimeter character (trailing = 1).</p>
+<p>We&rsquo;ve now &ldquo;bracketed&rdquo; a token. <code class="forth">first</code> points to its first character; <code class="forth">last</code> points just beyond its last character. (These &ldquo;pointers&rdquo; are actually both negative offsets from the end of the source text.) The (start, length) string tuple for the token is then</p>
+<pre>
+  (end + first, last - first)
+</pre>
+<p>We consume the token and trailing delimiter (if there was one) from the input stream by setting</p>
+<pre>
+  first = last + trailing.
+</pre>
+<p>Now we&rsquo;re ready to look for the next token.</p>
+<p>Of course, the astute reader will be wondering about the various boundary cases when the text runs out. By being careful about trailing, we ensure that <code class="forth">first</code> is never left > 0. At the end of parsing a token it will be &lt;= 0. If no characters were found between <code class="forth">first</code> and <code class="forth">last</code>, which can only happen if <code class="forth">first</code> = 0, possibly <em>after</em> skipping leading whitespace (think about it), then <code class="forth">last</code> &ndash; <code class="forth">first</code> will be 0 as well. At end of text we <em>always</em> return the token</p>
+<pre>
+  (end, 0)
+</pre>
+<p>and the interpreter code is smart enough to recognize this zero-length token as the end.</p>
+<p>So how do we interpret text typed by the user or loaded from a file?</p>
+<p>In the first case, simply call <code class="forth">interpret</code> with the tuple (start, length) that describes the buffer holding the input text that the user typed in. (It&rsquo;s called <code class="forth">typing</code> in startup.mu4.)</p>
+<p>For files, we simply mmap them, and then pass the (buffer, length) tuple to <code class="forth">interpret</code>! This make muforth&rsquo;s interpreter code look much more like a BLOCK-based Forth &ndash; which it isn&rsquo;t &ndash; than the file-based Forth that it is.</p>
+<p>Nested loading of files is possible because the file loading code actually calls <code class="forth">evaluate</code> (rather than <code class="forth">interpret</code> directly), which saves the current <code class="forth">source</code> and <code class="forth">first</code>, calls <code class="forth">interpret</code> on the new file&rsquo;s mmap&rsquo;ed text, then restores the old <code class="forth">source</code> and <code class="forth">first</code>, and keeps going from there.</p>
+<p>Since nested interpretation of the typing buffer isn&rsquo;t possible, it is interpreted directly, with no call to <code class="forth">evaluate</code> (see quit in startup.mu4).</p>
+<h2 id="the-dictionary"><a href="#the-dictionary">The dictionary</a></h2>
+<p>The dictionary in muforth is very simple. It is a set of intertwined linked lists of words. Each list represents what I call a chain, and consists of related words. The head of each chain is the word most recently defined on that chain.</p>
+<p>The dictionary space is linearly allocated. Each entry consists of a tuple:</p>
+<pre>
+  (link, code, count, name, padding)
+</pre>
+<ul>
+<li>a link pointer to the previous word on the same chain;</li>
+<li>a pointer to the machine code associated with the word;</li>
+<li>a 1 byte count of characters in the name;</li>
+<li>the bytes of the name;</li>
+<li>padding to a 4-byte boundary.</li>
+</ul>
+<p>The dictionary can in theory contain an arbitrary number of intertwined chains. muforth starts up with only two chains defined; their names and functions I shamelessly stole from Chuck Moore, but this time from cmFORTH. They are called &ldquo;forth&rdquo; and &ldquo;compiler&rdquo;. (He uses the same idea in colorforth, but calls the sets of words &ldquo;forth&rdquo; and &ldquo;macro&rdquo;, and they are arrays rather than lists.)</p>
+<p>The forth chain consists of &ldquo;normal&rdquo; words: words that should be executed when mentioned outside a colon definition, and compiled when mentioned inside one.</p>
+<p>The compiler chain fills the role that so-called IMMEDIATE words fill in more traditional Forths, but without their problems. Because it is a completely separate chain that is <em>not</em> searched outside of colon definitions, it is possible to have a word with the same name in both chains with no confusion. A perfect example is <code class="forth">.&rdquo;</code>. Outside a definition it simply scans for a trailing " delimiter and then echoes (types) the string. Inside a definition it compiles the string into &ldquo;data&rdquo; space, and compiles code to type it out at runtime. This is intuitively what we expect.</p>
+<p>Inside a colon definition the interpreter searches the compiler chain, and if it finds the token there it executes it rather than compiling it. In other words, words on the compiler chain execute at compile time, and tend to be used to build control structures like if/then and begin/while/repeat. Because of this, we often call them &ldquo;compiling words&rdquo;.</p>
+<p>But that&rsquo;s not the end of the story. If the token is <em>not</em> found on the compiler chain, we look on the forth chain, and if found there it is compiled.</p>
+<p>Ok, so how do we specify which chain a word gets compiled into, and how do we specify &ldquo;search orders&rdquo; like the above?</p>
+<p>A variable, called <code class="forth">current</code>, points to the &ldquo;current&rdquo; chain &ndash; the one that new definitions go into. By convention chains have funny names: forth and compiler are really called <code class="forth">.forth.</code> and <code class="forth">.compiler.</code>. I chose those names to indicate their chainness. (The dots on the ends are supposed to look like &ldquo;links&rdquo;.) When you mention a chain by name it simply pushes its address. It&rsquo;s basically a constant.</p>
+<p>So, also by convention, we define the words <code class="forth">forth</code> and <code class="forth">compiler</code>. These do more than simply name the chain; they make it the <code class="forth">current</code> chain, so new words get compiled into it.</p>
+<p>How does this work? Simple!</p>
+<pre>
+  : definitions  ( chain)  current ! ;
+  : forth        .forth. definitions ;
+  : compiler  .compiler. definitions ;
+</pre>
+<p>Any time we define a new chain, <code class="forth">.foo.</code> , we also define <code class="forth">foo</code> as above.</p>
+<p>Then our code can look like this:</p>
+<pre>
+  forth
+  [words compiled into .forth. chain]
+  compiler
+  [words compiled into .compiler. chain]
+</pre>
+<p>Now we can specify what chain words get compiled <em>into</em>, but what about specifying which chains get searched, and when, and what we do with the words that we find? I&rsquo;ll first explain the basic dictionary search mechanism, but to fully answer this question I have to talk about the structure of the interpreter &ndash; another cool muforth innovation.</p>
+<p>find is the workhorse word that searches the dictionary. You supply it a token (start, length), and the pointer to the head of a dictionary chain (such as <code class="forth">.forth.</code>). find returns true and a pointer to the word&rsquo;s code if it found it, or false and the (start, length) tuple you originally gave it if not. This way it&rsquo;s easy to specify a <em>sequence</em> of searches of chains, using the same token over and over.</p>
+<p>Which brings us to...</p>
+<h2 id="the-interpreter"><a href="#the-interpreter">The interpreter</a></h2>
+<p>Like everything in muforth, I wanted the interpreter to be dead simple, but incredibly flexible. Traditionally, Forth interpreters have relied on lots of gross hacks and &ldquo;tricks&rdquo; that not only make them hard to understand, but hard to use as well.</p>
+<p>The interpreter basically looks like this:</p>
+<pre>
+  : interpret  ( start length)
+    >text source 2!  first !
+    begin  token  dup while  consume ?stack  repeat ;
+</pre>
+<p><code class="forth">>text</code> converts (start, length) &ndash; the string we want to interpret &ndash; into (end, -length) &amp; -length, which go into source and first, respectively. (This Forth code is a bit hypothetical; this really happens in C in interpret.c.)</p>
+<p>The loop is simple. Get a token. If its length is 0, we&rsquo;re done. Otherwise, consume the token and then check the stack for over- &amp; underflow.</p>
+<p>Wow. That&rsquo;s it?</p>
+<p>The magic all happens in <code class="forth">consume</code>. Depending on the state of the interpreter, <code class="forth">consume</code> does wildy different things with the token.</p>
+<p>It may not surprise Forth old-timers, but muforth has a variable called <code class="forth">state</code>. Its use is <em>much</em> different than the traditional one, though. My <code class="forth">state</code> points to a two-cell data structure. The first cell is a pointer to the code to <em>consume</em> a token; the second is a pointer to code to display an informative prompt, so if you&rsquo;re doing something at the keyboard, you&rsquo;ll know what state the interpreter is in.</p>
+<p><code class="forth">consume</code> is then defined as:</p>
+<pre>
+  : consume  state @  @execute ;
+</pre>
+<p>I call this (consume, prompt) tuple a <em>mode</em>. muforth has only two modes built-in. Can you guess what they are? Interpret and compile, of course!</p>
+<p>Here is the <em>consume</em> function for interpret mode. It has a funny name. Because <code class="forth">[</code> leaves the colon compiler and <code class="forth">]</code> enters it, the interpret-mode consume function is called <code class="forth">_[</code> and its compiler dual is <code class="forth">_]</code>.</p>
+<pre>
+  : _[   ( interpret one token)
+       .forth. find  if  execute ^ then  number ;
+</pre>
+<p>Look in <code class="forth">.forth.</code> for the token. If found, execute it. If not, try to convert it as a number. If that fails, <code class="forth">number</code> will complain. Note that there is <em>no</em> mention of <code class="forth">.compiler.</code>! Words in <code class="forth">.compiler.</code> are invisible to interpret mode.</p>
+<p>The colon compiler&rsquo;s <em>consume</em> function is this:</p>
+<pre>
+  : _]   ( compile one token)
+    .compiler. find  if  execute ^ then
+       .forth. find  if  compile, ^ then  number, ;
+</pre>
+<p>Search <code class="forth">.compiler.</code> for the token. If found, execute it (it is a <em>compiling word</em>). If not, search <code class="forth">.forth.</code>. If found there, compile it. If not found, try to convert it as a number. If that fails, <code class="forth">number,</code> will complain. If it succeeds, it will compile a literal (hence the comma in the name <code class="forth">number,</code>.)</p>
+<p>Super-simple, right?</p>
+<p>Again, Forth old-timers will laugh at how simple this is compared to what it replaces: ONLY/ALSO, arrays of weird nibble-encoded dictionary chain indices, etc.</p>
+<p>I think the fundamental difference between this approach and the traditional ones is that the traditional approaches allow for &ndash; in fact, <em>demand</em> &ndash; the run-time creation of search orders. In my humble opinion, that&rsquo;s simply the wrong time to be creating a search order! When you figure out what you&rsquo;re trying to do &ndash; what your interpreter <em>mode</em> is supposed to accomplish &ndash; you&rsquo;re going to arrive at a search order that is <em>fixed and constant</em> for that interpreter mode.</p>
+<p>I should add that the traditional approaches only specify a search order; you still have to have immediate words and other gross hacks in order to have compiling words work. My way specifies not only the search order, but exactly what to do when a token is found in a particular chain. And the &ldquo;encoding&rdquo; for it is very simple and easy to read. In fact, it&rsquo;s the simplest thing that could possibly work: straight Forth code!</p>
+<p>What makes this <em>really</em> nifty is that it&rsquo;s trivial to create more modes for the interpreter. startup.mu4 creates a mode for conditional interpretation, by creating a new dictionary chain called <code class="forth">.conditional.</code> and creating a new interpreter mode. It&rsquo;s a bit hairy, mostly because it allows <em>nested</em> conditionals, but it&rsquo;s not much code and it&rsquo;s a nice approach: use the interpreter to scan for tokens for you! That&rsquo;s what it&rsquo;s for!</p>
+<p>The simplicity and extensibility of this approach wins big for metacompilation as well, which, when I finish working on muforth&rsquo;s &ldquo;universal metacompiler&rdquo;, I&rsquo;d like to write about.</p>
+<h2 id="the-funny-compiler-word-called"><a href="#the-funny-compiler-word-called">The funny compiler word called <code class="forth">\</code></a></h2>
+<p>ANS Forth has a word called POSTPONE that is horrendously complicated but unfortunately actually useful.</p>
+<p>Before I talk about that I want to mention the idea of forcing interpretation or compilation from a different dictionary chain than the current interpreter mode would normally choose. An easy example is that we&rsquo;re writing a compiling word that does the same thing that another compiling word does, but then does a bit of its own stuff as well. Without some kind of &ldquo;escape&rdquo; mechanism there is no way to compile a call to the other compiling word, since any mention of it inside a colon definition will result in its <em>execution</em> rather than its compilation. What to do?</p>
+<p>muforth defines several such escape words.</p>
+<pre>
+  \f forces compilation of the following token from the .forth. chain
+  \c forces compilation from the .compiler. chain
+</pre>
+<p>But if you look through startup.mu4, you&rsquo;ll see very few references to either of these words. Mostly you&rsquo;ll see references to a funny word called <code class="forth">\</code>.</p>
+<p><code class="forth">\</code> is my name for POSTPONE, courtesy of Chuck Moore. (It was part of cmFORTH.)</p>
+<p><code class="forth">\</code> is like <code class="forth">\c</code>, but it does more than that.</p>
+<p>First it looks for the token on <code class="forth">.compiler.</code> and compiles it if found. (This is what <code class="forth">\c</code> does, but it stops there &ndash; in fact it complains if the token wasn&rsquo;t found on <code class="forth">.compiler.</code>.)</p>
+<p>If instead it&rsquo;s on the <code class="forth">.forth.</code> chain, <code class="forth">\</code> compiles code into the word that we&rsquo;re currently compiling, that, when later <em>executed</em>, will compile a call to the word we found in <code class="forth">.forth.</code>.</p>
+<p>It&rsquo;s kind of a postpone, no matter what. Let&rsquo;s say we&rsquo;re defining the word foo, like this:</p>
+<pre>
+  : foo  \ bar ;
+</pre>
+<p>If bar is a <code class="forth">.compiler.</code> word, postpone <em>its</em> execution until foo executes. If bar is a <code class="forth">.forth.</code> word, postpone its <em>compilation</em> until foo executes. That&rsquo;s probably the best way to think about it.</p>
+<p>With that in mind, let&rsquo;s think about...</p>
+<h2 id="structure-compiling-words"><a href="#structure-compiling-words">Structure compiling words</a></h2>
+<p>One way to write a loop is like this:</p>
+<pre>
+   begin ... &lt;test> while ... repeat
+</pre>
+<p><code class="forth">begin</code> marks the beginning. &lt;test> leaves a flag on the stack, which <code class="forth">while</code> consumes, falling through if true and jumping <em>past</em> <code class="forth">repeat</code> if false. <code class="forth">repeat</code> then jumps to the code following <code class="forth">begin</code>.</p>
+<p>So what gets compiled looks something like this, using labels (like &ldquo;beginning:&rdquo;) as jump destinations:</p>
+<pre>
+  beginning:
+    ...
+    &lt;test>
+    branch if zero to end
+    ...
+    branch to beginning
+  end:
+</pre>
+<p><code class="forth">begin</code> compiles nothing, but marks the top of the loop by pushing the address of beginning. <code class="forth">until</code> compiles the branch if zero. <code class="forth">repeat</code> compiles the branch to beginning, the address pushed on the stack by <code class="forth">begin</code>.</p>
+<p>Let&rsquo;s compare this to the code produced by if/then.</p>
+<pre>
+  &lt;test> if ... then
+</pre>
+<p>This compiles</p>
+<pre>
+    &lt;test>
+    branch if zero to end
+    ...
+  end:
+</pre>
+<p>Hmm. This looks just like the code that <code class="forth">while</code> is supposed to compile. Do <code class="forth">if</code> and <code class="forth">while</code> do exactly the same thing? Not quite. But before we look at the difference, let&rsquo;s think about what <code class="forth">repeat</code> has to do. It has to compile a backwards branch to beginning, and <em>then</em> it has to fix up the address of the forward branch that <code class="forth">while</code> compiled so that it branches to end.</p>
+<p>So what about <code class="forth">while</code>? After compiling the conditional branch, the stack has two pointers on it: beginning, and a reference to the forward branch that <code class="forth">repeat</code> will fix up. But they&rsquo;re in the wrong order! <code class="forth">repeat</code> needs to see beginning first, then the forward branch fix up address. So we need to swap the addresses on the stack. While in theory <code class="forth">repeat</code> could do this, in practice that&rsquo;s the wrong place, because nothing prevents us, with properly defined words, from doing</p>
+<pre>
+  begin ... while  ... until ... then
+</pre>
+<p>which is actually a <em>very</em> useful construct. Unless <code class="forth">while</code> does the swap, <code class="forth">until</code> will break, because like <code class="forth">repeat</code> it expects the address of the beginning of the loop on the top of the stack.</p>
+<p>All of this explains why <code class="forth">while</code> and <code class="forth">repeat</code> are defined thus:</p>
+<pre>
+  : while   ( dest - src dest)   \ if  swap ;
+  : repeat  ( src dest -)     \ again  \ then ;
+</pre>
+<p>In fact, <code class="forth">repeat</code>'s definition as <code class="forth">\ again \ then</code> suggests using <code class="forth">until</code> ... <code class="forth">then</code> in our own code.</p>
+<p>Of course, I haven&rsquo;t given any good reason for using <code class="forth">\</code> over <code class="forth">\c</code> to compile references in compiling words to other compiling words. Oh well.</p>
+<h2 id="the-joy-of-tail-recursion"><a href="#the-joy-of-tail-recursion">The joy of tail recursion</a></h2>
+<p>Tail-recursion was a motivation for writing muforth. What the heck is it? you ask. Fair enough.</p>
+<p>If I write</p>
+<pre>
+  : foo  a b c foo ;
+</pre>
+<p>What will happen when foo executes? On a normal Forth, the last reference to foo will compile a call to foo, which, when executed, will push the return stack. (Actually, in most Forths, in the presence of SMUDGE, the reference to foo inside foo will fail unless we somehow tell the compiler that foo is &ldquo;recursive&rdquo;.)</p>
+<p>After foo executes for a while, the return stack will overflow, and the program will crash.</p>
+<p>But let&rsquo;s look closer at foo. Is there any reason to push the stack when we call foo from itself? What&rsquo;s it going to do when it returns? It&rsquo;s going to return to its caller! So why return to ourselves if we&rsquo;re going to immediately return to our caller? Why indeed!</p>
+<p>The call to foo is in what Scheme people call &ldquo;tail position&rdquo;. Any call in tail position has nothing terribly interesing to do when it returns &ndash; it&rsquo;s going to return directly to its caller. So what was discovered is that calls in tail position can be converted to jumps. This conversion is called &ldquo;tail-call conversion&rdquo;, and it&rsquo;s very simple, but very powerful.</p>
+<p>What happens when we do this? Suddenly foo becomes a word that contains an infinite loop, but one that consumes zero stack space. We&rsquo;ve defined a word that is syntactically recursive, but procedurally iterative. This is a very powerful idea, but one that&rsquo;s been with us since the dawn of Lisp, way back when only FORTRAN existed.</p>
+<p>Using tail-recursion obviates the need for any looping constructs. muforth has them, but really it doesn&rsquo;t need them.</p>
+<p>A last question worth asking is, when can we do this conversion, and when can&rsquo;t we? At any exit from a word, either via <code class="forth">^</code> or <code class="forth">;</code> we can do the conversion. There is one case where we have to be careful. If the byte after our converted tail-call is a jump destination, we have to compile a return instruction there.</p>
+<p>In the following code:</p>
+<pre>
+  : foo  if a b c then  foo ;
+</pre>
+<p>&ldquo;call foo&rdquo; gets converted to &ldquo;jump foo&rdquo;. What about:</p>
+<pre>
+  : foo  if a b c foo then ;
+</pre>
+<p>Here the conversion happens too, but <em>also</em> a return instruction gets compiled after the &ldquo;jump foo&rdquo;. Strange but true!</p>
+<h2 id="simple-and-tail-recursive-native-compiler"><a href="#simple-and-tail-recursive-native-compiler">Simple and tail-recursive native compiler</a></h2>
+<p>Since muforth text is compiled into native code, we need to define a compiler. Compilers are usually big and complicated, and take a long time to write. This is because most languages are big and complicated, and also because the compiler writers are interested in the best runtime performance they can get.</p>
+<p>Forth is simple, and with muforth I&rsquo;m really more interested in simplicity, ease of use, and ease of understanding than in raw performance. The code that the compiler generates frankly sucks, but it&rsquo;s really simple. Amazingly even sucky code can run fast enough to be perfectly usable and useful!</p>
+<p>So, how does it work?</p>
+<p>Like most Forths, muforth spends most of its time generating sequences of calls to words. Threaded Forths do the same thing: they compile sequences of &ldquo;execution tokens&rdquo; (to use the FORTH-83 and ANS term) which are essentially calls with the call opcode stripped off. So, at the lowest level, almost everything that gets compiled in muforth is a call.</p>
+<p>The compiler &ldquo;remembers&rdquo; the address of the last call instruction that it compiled, and so when we&rsquo;re about to compile a &ldquo;return&rdquo; to exit from the word, if the last instruction compiled was a call (and therefore it&rsquo;s in tail position), it gets converted to a jump.</p>
+<p>That&rsquo;s pretty simple. But what else is there?</p>
+<p>One of the issues with writing muforth was that gcc didn&rsquo;t let me define a global register variable to use for the stack pointer or the top of stack, both of which, in the absence of gcc limitations, I wanted. I can&rsquo;t think of a way to generate even <em>reasonably</em> good code unless I have those two global registers. But I can&rsquo;t have them. Pooh.</p>
+<p>So, the stack is simply a C array (of cell_t&rsquo;s), and the stack pointer (sp) is a normal C global variable that lives in memory, that points to a cell_t. TOP is just sp[0].</p>
+<p>If I am generating code that does anything with the stack, I first have to get sp into a register, indirect off of it, maybe modify it, and then write it back. So there are a bunch of routines in the compiler C code that compile these various operations.</p>
+<p>There is also code to generate four different kinds of branch instructions, the combinatorial product of (unconditional branch, branch if top == 0) and (pop the top, do not pop the top), and also the goo underlying for/next.</p>
+<p>Since getting at the return stack (the true hardware stack) is impossible without low-level support, there are several routines that compile various pushes, pops, and copies that involve the return stack.</p>
+<p>That&rsquo;s about it! For the x86 it&rsquo;s about 300 lines of code.</p>
+<p>All of the smarts for compiling control structures (if/then and friends), and new data structure types (create/does>) is <em>all</em> defined in Forth in startup.mu4.</p>
+<h2 id="towards-a-new-createdoes"><a href="#towards-a-new-createdoes">Towards a new create/does></a></h2>
+<p>First, let&rsquo;s talk a bit about &ldquo;old&rdquo; create/does>, what it does, and how it (used to) work.</p>
+<p>Basically, <code class="forth">create</code> creates a new word in the dictionary, and <code class="forth">does></code> causes this new word, when later executed, to execute a particular piece of code.</p>
+<p><code class="forth">create</code> and <code class="forth">does></code> are used to define &ldquo;defining words&rdquo; &ndash; words that build new kinds of data structures. The defining word contains code to create the data structure, and code to be executed by all the &ldquo;child words&rdquo; that this defining word is used to define.</p>
+<p>So a word called &ldquo;definer&rdquo; could be written:</p>
+<pre>
+  : definer  create  &lt;build the data structure>
+              does>  &lt;do something with data structure>  ;
+</pre>
+<p>And used:</p>
+<pre>
+   definer foo
+</pre>
+<p>The code to build the data structure is executed when the definer <em>executes</em> &ndash; this is also the <em>compile</em> time of foo. The code to do something with the data is executed when <em>foo</em> executes. So we can create new structures and new behaviors. But how do we link them? In other words, how to tell the behavior code &ndash; which lives in definer and is thus <em>common</em> to all words that definer defines &ndash; where to find the data of each child word, such as foo?</p>
+<p>What used to happen is that the child word, foo, would look like this when compiled:</p>
+<pre>
+  foo:
+    call definer_code
+    &lt;foo's data>
+</pre>
+<p>When foo is executed the call to definer_code has the side effect of <em>pushing</em> the address of foo&rsquo;s data onto the return stack. (The use of &ldquo;call&rdquo; here is confusing. call is being used for its behavior &ldquo;push address of following byte and then jump&rdquo;, which is what a call does. But normally the &ldquo;address of following byte&rdquo; is construed as a return address. Here it is used as a data address, which is popped and never used as a return address.)</p>
+<p>definer_code can then pop the data address off the return stack, and push it onto the data stack, where the definer_code can use it.</p>
+<p>But there are a couple of subtleties here. One is that definer_code is Forth, so in addition to moving the address of foo&rsquo;s data onto the correct stack, an entry into the Forth interpreter (for threaded Forths), including a push of the return stack, has to occur as well. Another is that the body of foo now mixes code with data, something that I am trying to avoid with muforth.</p>
+<p>I&rsquo;m going to avoid explaining the subtleties of how threaded Forths have traditionally accomplished this. It&rsquo;s one of the most strange and wonderful aspects of Forth, but it&rsquo;s also subtle and complicated, and the way muforth does it is quite a bit simpler. Maybe when muforth&rsquo;s way really makes a lot of sense to you you&rsquo;ll be ready to conquer the &ldquo;old&rdquo; way.</p>
+<p>In summary then, when the child word executes two things have to happen:</p>
+<ul>
+<li>the address of its data is pushed onto the data stack;</li>
+<li>a call is made to the shared code in the defining word.</li>
+</ul>
+<p>When I started thinking about clean but clever ways to push an address of data, and then jump to a common piece of code, but without mixing code and data in the child word, I realized that it was impossible. The best I could do was to load a register with a constant, and then jump to the common code.</p>
+<p>But this, it turns out, is all you need! The constant can be a constant, with intrinsic value of its own, or it can be the address of the child word&rsquo;s data, if it has any.</p>
+<p>What this means in usage is that whereas the old-style <code class="forth">does></code> &ldquo;knew&rdquo; what address to push, my new-style <code class="forth">does></code> has to be passed a constant value to compile into the child. If the constant should be an address of a data area, then call <code class="forth">ram</code> to get an address, and pass it to <code class="forth">does></code>. Sometimes the stack manipulation is bit clumsy, but it&rsquo;s a good system in general.</p>
+<p>It wasn&rsquo;t necessary to do things this way. I could have kept the old behavior, that <code class="forth">does></code> compiles code to push the address of the next free byte of ram &ndash; in other words, that the &ldquo;constant&rdquo; it pushes is always an address. This makes the defining words look a little cleaner, but it is less efficient when you actually want to compile a constant into the data space (you have to comma it into ram when you define the word and then fetch it out again whenever you want to use it), and it doesn&rsquo;t allow for the address being anywhere but the next available byte of ram. On ROMed systems you sometimes want <code class="forth">does></code> to push a ROM address instead. This new way lets you choose which you want, by simply supplying the proper constant to <code class="forth">does></code>.</p>
+<h2 id="inside-the-guts-of-createdoes"><a href="#inside-the-guts-of-createdoes">Inside the guts of create/does></a></h2>
+<p>With that introduction, let&rsquo;s look at the gory implementation details. The code examples here are very x86-specific since at present that is the only implementation. But it&rsquo;s the ideas that I&rsquo;m interested in conveying, so hopefully this will not be a deterrent.</p>
+<p>First of all, <code class="forth">does></code> changes from compiling an <em>address</em> to compiling a <em>constant</em> &ndash; which could, of course, be an address. <code class="forth">does></code> splits the code to push a constant into two parts: a load part and a push part. The load part is the code:</p>
+<pre>
+  movl $constant,%edx
+</pre>
+<p>The push part is the call (or jump!) to push-literal. This is the same code that <code class="forth">literal</code> generates; we&rsquo;re splitting it into two parts to save code space.</p>
+<p>Here&rsquo;s how it works. Let&rsquo;s say we&rsquo;re writing an assembler and need words for addressing modes. Like many create/does> words, these consist of a <em>constant</em> and some code. The old way to do this would go something like:</p>
+<pre>
+  : md  create ,  does> @  a b c ;
+</pre>
+<p>This is a clumsy way to work with constants &ndash; compiling them into the word only to fetch them out again &ndash; and is inefficient when compiled to native code. My modernized way looks like this:</p>
+<pre>
+  : md  create  does>  a b c ;
+  octal 004 md deferred
+</pre>
+<p><code class="forth">does></code> by default creates a constant, which gets pushed when the child word &ndash; <code class="forth">deferred</code> in this example &ndash; is executed. The actual code that is compiled looks like this:</p>
+<pre>
+  md: call create         ; define-time
+      call ;does          ; define-time
+  md_does:
+      call push_literal   ; run-time
+      call a              ; run-time
+      call b              ; run-time
+      jmp  c              ; run-time
+</pre>
+<pre>
+  deferred:
+      movl $004, %edx
+      jmp md_does
+</pre>
+<p>Wait a minute! How did that <code class="forth">;does</code> thing get in there? Well, <code class="forth">does></code> is actually a <em>compiler</em> word. It compiles &ldquo;call ;does&rdquo; followed by &ldquo;call push_literal&rdquo; into the word being defined &ndash; <code class="forth">md</code> in this case.</p>
+<p>When <code class="forth">md</code> is called &ndash; to create a child word, or, equivalently (for OO types) an <em>instance</em> &ndash; <code class="forth">md</code> create&rsquo;s the new word and then <code class="forth">;does</code> compiles the load constant and the jump to <code class="forth">md</code>'s run-time code.</p>
+<p>If we hadn&rsquo;t split the push-constant part, the code in each child word &ndash; and there could be lots of them! &ndash; would have to have an extra call:</p>
+<pre>
+  md: call create         ; define-time
+      call ;does          ; define-time
+  md_does:
+      call a              ; run-time
+      call b              ; run-time
+      jmp  c              ; run-time
+</pre>
+<pre>
+  deferred:
+      movl $'006, %edx
+      call push_literal
+      jmp md_does
+</pre>
+<p>What we have essentially done is move the &ldquo;call push_literal&rdquo;, since it is common to every child word, out of the child and into the parent.</p>
+<p>With that long-winded intro, we can now get into some of the odd subtleties of this brave new world.</p>
+<p>The first subtlety is that while <code class="forth">does></code> and <code class="forth">constant</code> &ndash; as defined below &ndash; both create some type of constant, they do it slightly differently. <code class="forth">constant</code> creates a word and writes code to push a constant &ndash; both the load and push halves of that action &ndash; and then forces a <em>tail-call conversion</em> of the call to push_literal, changing it to a <em>jump</em> and thereby ending the word. It can do nothing more than push its constant.</p>
+<p>This ends up being syntactic sugar;</p>
+<pre>
+  4 constant cell
+</pre>
+<p>and</p>
+<pre>
+  : cell  4 ;
+</pre>
+<p>produce exactly the same code; namely:</p>
+<pre>
+  cell:
+    movl $4,%edx
+    jmp  push_literal
+</pre>
+<p><code class="forth">does></code> is different; it leaves open &ndash; in fact encourages! &ndash; doing something exciting with the constant that has just been pushed. (Remember that this constant could be the address of some data structure.) It splits the constant-pushing task into two parts, as described above, putting the load into the child and the push into the parent, but leaves the call to push_literal as a <em>call</em> that is expected to be followed, as in <code class="forth">md</code> above, with code that processes the constant.</p>
+<p>To drive home this subtle difference, assume that we defined <code class="forth">constant</code> thus:</p>
+<pre>
+  : constant  create does> ;
+  4 constant cell
+</pre>
+<p>Now what do we have?</p>
+<pre>
+  constant:
+    call create
+    call ;does
+  constant_does:
+    jmp  push_literal
+</pre>
+<pre>
+  cell:
+    movl $4,%edx
+    jmp  constant_does
+</pre>
+<p>This is slightly less efficient; it compiles extra code into the parent word &ndash; the run-time code &ldquo;jmp push_literal&rdquo; &ndash; and to execute this constant we do a jump to a jump, which is both silly and slow.</p>
+<p>Note: the trailing <code class="forth">;</code> in our example definition of <code class="forth">constant</code> above changed the &ldquo;call push_literal&rdquo; to &ldquo;jmp push_literal&rdquo;. Sneaky!</p>
+<p>The other important subtlety is that these constants &ndash; esp. when they are the address of some data structure &ndash; can be in the way when compiling said data structure. The constant that you want compiled into the child word has to be on the stack when <code class="forth">;does></code> executes. It&rsquo;s a bit clumsy, but you have to do something like this:</p>
+<pre>
+  : clumsy  create  ram  push  , ,  pop  does>  a b c ;
+  thing1 thing2 clumsy example
+</pre>
+<p>I suppose you could write that like this too, with consequent changes in how the data is &ldquo;fetched&rdquo; and used in a, b, and c:</p>
+<pre>
+  : less-clumsy  create  literal  does>  a' b' c' ;
+  thing1 thing2 less-clumsy example
+</pre>
+<p>In this case we compile <em>two</em> literals, the second one being &ldquo;split in two&rdquo; in the canonical way:</p>
+<pre>
+  less_clumsy:
+    call create
+    call literal    ; compiles code to load &amp; push a literal
+    call ;does
+  less_clumsy_does:
+    call push_literal
+    call aprime
+    call bprime
+    jmp  cprime
+</pre>
+<pre>
+  example:
+    movl $thing2,%edx
+    call push_literal
+    movl $thing1,%edx
+    jmp  less_clumsy_does
+</pre>
+<p>With this new kind of create/does>, you choose how to do it.</p>
+<p>Having understood create/does> you&rsquo;ve tackled one of sublime mysteries of Forth. The other sublime mystery is our next subject...</p>
+<h2 id="the-structure-and-interpretation-of-metacompilers"><a href="#the-structure-and-interpretation-of-metacompilers">The structure and interpretation of metacompilers</a></h2>
+<ul>
+<li>getting the right words &ndash; dict structure, escapes <code class="forth">\o</code> etc</li>
+<li>time phases</li>
+<li>compiling numbers</li>
+<li>finish with example of create/does></li>
+<li>be clear about inside == compiling words, outside == mostly defining words</li>
+</ul>
+<p>A metacompiler is what most people outside of Forth call a cross-compiler: a compiler that runs on one machine (the &ldquo;host&rdquo;) and compiles code for another (the &ldquo;target&rdquo;). We do not here discuss an exciting variation called the Canadian Cross, wherein we compile a cross compiler on one machine (the &ldquo;compile host&rdquo;), that executes on a second machine (the &ldquo;host&rdquo;), to compile code for a third machine (the &ldquo;target&rdquo;). While exciting, there isn&rsquo;t at the moment the need or application for this when using muforth.</p>
+<p>What makes metacompilers hard to write and understand? I think it&rsquo;s a combination of three things, which interrelate in complicated ways:</p>
+<ul>
+<li>the time phases of metacompilation;</li>
+<li>&ldquo;when words collide&rdquo;; or, getting the word you asked for;</li>
+<li>the two sides of defining words</li>
+</ul>
+<p>I&rsquo;ll talk about them in turn, but they are intertwingled, so it won&rsquo;t be an entirely linear discussion.</p>
+<h2 id="time-phases-of-metacompilation"><a href="#time-phases-of-metacompilation">Time phases of metacompilation</a></h2>
+<p>Let&rsquo;s start with the idea of metacompiler time phases; this should lead naturally to discussion of the other aspects.</p>
+<p>This aspect of metacompilation is rather ill-defined, and different folks have pioneered different approaches over the years. Unfortunately (as I&rsquo;m not much of a fan of Perl or its philosophy) there&rsquo;s more than one way to do it. One chooses ease over clumsiness, perhaps. But it my experience &ldquo;ease&rdquo; often translates into ambiguity and confusion. My discussion here will focus on an approach that chooses explicitness and verbosity over &ldquo;ease&rdquo;.</p>
+<p>Roughly speaking, there are three time phases of metacompilation:</p>
+<ol>
+<li>compiling the metacompiler code;</li>
+<li>executing the metacompiler code, compiling the target code;</li>
+<li>executing the target code.</li>
+</ol>
+<p>(1) and (2) occur on the host machine; (3) occurs on the target machine. (If we are doing tethered debug, (3) needs a little help from the host machine, but mostly the execution occurs on the target.)</p>
+<p>We can break this down still further.</p>
+<p>In (1) we are compiling code that will later execute on the host to read a text stream of &ldquo;target Forth code&rdquo; and build a memory image of the compiled target code. We&rsquo;ll likely need all of the following:</p>
+<ul>
+<li>an assembler for the target architecture;</li>
+<li>defining words (<code class="forth">: variable code</code> etc.) for the target;</li>
+<li>compiling words (<code class="forth">; if then begin while repeat</code> etc.) for the target;</li>
+<li>a list of target words as we define them;</li>
+<li>assorted and sundry utility words for managing memory spaces, etc.</li>
+</ul>
+<p>In the past I have overlapped defining this infrastructure with metacompiling the target code, in order to keep things together that seem to &ldquo;belong&rdquo; together. This is a nicety that complicates the system. We will not be discussing such a system here; rather, we will try to &ldquo;firewall&rdquo; the phases from each other as much as possible, in the interest of modularity.</p>
+<p>Looking at the list above we immediately notice that we will be redefining almost all the basic infrastructure words with metacompiler versions, and we will be creating target versions of most of the <code class="forth">.forth.</code> chain. Creating separate chains for these new words will help dramatically to prevent confusion and ambiguity.</p>
+<p>In both phases (1) and (2) being able to specify exactly <em>which</em> version of a word we want becomes critical. That brings us naturally to our second big metacompiler subject...</p>
+<h2 id="when-words-collide-or-how-to-keep-aliasing-from-driving-you-crazy"><a href="#when-words-collide-or-how-to-keep-aliasing-from-driving-you-crazy">When words collide; or, how to keep aliasing from driving you crazy</a></h2>
+<p>You have to be unambiguously clear about which version of <code class="forth">dup</code> you mean when you call it by name. This is the idea of &ldquo;when words collide&rdquo;: you type &ldquo;dup&rdquo;, but because of the design of the system you get the <em>wrong</em> <code class="forth">dup</code> (the host&rsquo;s instead of the target&rsquo;s, the metacompiler&rsquo;s rather than the host&rsquo;s, etc.) and <em>something</em> gets compiled or executed, and a while later everything crashes down, but you have no idea why.</p>
+<p>This kind error is a Royal Pain to find and fix. It is much nicer to force disambiguation of &ldquo;which dup&rdquo; up front, rather than pay later. The muforth way is to create several dictionary chains, one for each &ldquo;context&rdquo; in which a word might appear, and then to create several interpreter modes, each one corresponding roughly to a phase or task in the metacompiler.</p>
+<p>John Rible and Bill Muench wrote an elegant metacompiler in which they pioneered the use of the terms &ldquo;outside&rdquo; and &ldquo;inside&rdquo; to mean &ldquo;metacompiler words that occur outside of colon definitions&rdquo; (mostly defining words) and &ldquo;metacompiler words occuring inside colon definitions&rdquo; (mostly compiling words). I really like the descriptiveness of these terms and to honor their inventors have named the dictionary chains in muforth&rsquo;s metacompiler that serve similar purposes <code class="forth">.outside.</code> and <code class="forth">.inside.</code>. They are just like <code class="forth">.forth.</code> and <code class="forth">.compiler.</code> on the host, but have the advantage of having names distinct from, and cooler than, the host names.</p>
+<ul>
+<li><code class="forth">.outside.</code> contains target <em>defining</em> words: <code class="forth">: variable code</code></li>
+<li><code class="forth">.inside.</code> contains target <em>compiling</em> words: <code class="forth">; if then begin while repeat</code></li>
+</ul>
+<p>In addition to these, I define <code class="forth">.assembler.</code> to hold the target assembler words, and <code class="forth">.target.</code> to hold the words that we&rsquo;re &ndash; finally! &ndash; defining on the target.</p>
+<p>By putting the words into different chains like this it becomes much easier to know what you are getting when you say &ldquo;dup&rdquo;. We define an interpreter mode for each phase of metacompilation, and we try to define each mode to minimize ambiguity &ndash; the collision of words, or accidental getting of something other than called for &ndash; even at the cost of increasing verbosity.</p>
+<p>Instead of building into our interpreter modes automatic searches of all the chains that <em>might</em> contain the word we want &ndash; thus dramatically increasing the likelihood of word collision &ndash; we define a prefix &ldquo;escape&rdquo; mechanism for executing or compiling a word from a chain <em>other than</em> the one that would be &ldquo;normal&rdquo; for our interpreter mode. A perfect example is the use of <code class="forth">\</code> and <code class="forth">\c</code> to force compilation of <code class="forth">.compiler.</code> words.</p>
+<p>For every chain in the metacompiler we define an escape, thus:</p>
+<pre>
+  \f  compile from .forth.
+  \c  compile from .compiler.
+  \o  compile from .outside.
+  \i  compile from .inside.
+  \a  compile from .assembler.
+  \t  compile from .target.  (occasionally useful if .target. words are
+                              defined using create/does>)
+</pre>
+<p>As a concrete example, assume we are writing an outside word that happens to depend on both words from <code class="forth">.forth.</code> and <code class="forth">.outside.</code>. Since it would be folly (I think &ndash; I may address this question further later on) to define an interpreter mode that searches <code class="forth">.outside.</code> then <code class="forth">.forth.</code> (or vice versa), we instead use the regular Forth compiler to define <code class="forth">.outside.</code> words &ndash; which means that <em>every</em> use of an <code class="forth">.outside.</code> word within the definition must be prefixed with <code class="forth">\o</code>. This might seem clumsy and verbose, but it has the advantage of being unambiguous.</p>
+<p>A key point to remember is this: while <em>defining</em> all the metacompiler words we are running the normal muforth interpreter and compiler: only <code class="forth">.forth.</code> and <code class="forth">.compiler.</code> are being searched. If we want to reference an <code class="forth">.outside.</code> word that we just defined, we have to be explicit about it: eg, "<code class="forth">\o here</code>" .</p>
+<p>We can now sketch the possible &ldquo;consume&rdquo; functions for various interpreter modes. The <code class="forth">.outside.</code> words <code class="forth">remote</code>, <code class="forth">compile,</code> and <code class="forth">number,</code> respectively do remote execution on the target, compilation of a procedure call for the target, and compilation of a literal for the target. (In defining the following modes, I&rsquo;ve left off the prompts for clarity.)</p>
+<pre>
+ -:  .assembler. find  if  execute ^ then
+       .outside. find  if  execute ^ then  number ;
+ mode meta-assembler
+</pre>
+<pre>
+ -:  .outside. find  if  execute ^ then
+      .target. find  if  \o remote ^ then  number ;
+ mode meta-outside
+</pre>
+<pre>
+ -:  .inside. find  if  execute ^ then
+     .target. find  if  \o compile, ^ then  \o number, ;
+ mode meta-inside
+</pre>
+<pre>
+ -:  .target. find  if  \o remote ^ then  number ;
+ mode target
+</pre>
+<p>Things to note:</p>
+<ul>
+<li>None of these modes helps directly with the task of building the metacompiler itself. If we need to refer to an <code class="forth">.assembler.</code> word, an <code class="forth">.outside.</code> word, or an <code class="forth">.inside.</code> word, we have to use an escape (<code class="forth">\a</code>, <code class="forth">\o</code>, or <code class="forth">\i</code>).</li>
+<li>meta-assembler mode does not search <code class="forth">.target.</code>. If we want to find the target address of a variable, we will have to define a special &ldquo;escape&rdquo; function to do this. In the past I have had the meta-assembler mode do this automatically but I think this is error-prone.</li>
+<li>The assembler will need to be able to do basic arithmetic (calculating offsets, shifts, masks, etc.). The best way to make this possible is to put aliases for a handful of host <code class="forth">.forth.</code> math words into <code class="forth">.assembler.</code>. This must be done judiciously. Another option would be <code class="forth">\f</code> escapes.</li>
+<li>Target mode does not search for any &ldquo;debugging&rdquo; words that execute on the host. These are necessary for painless use of the system. Probably an <code class="forth">.interaction.</code> chain is necessary, to be <em>very judiciously</em> filled with synonyms (aliases) of host words that are useful for changing the radix, printing the stack, dumping memory, etc.</li>
+<li>Only meta-inside does special processing of numbers. I&rsquo;m not sure that this is right, but I think it is. Where numbers are converted from host to target form &ndash; say, in the assembler when it takes an offset from the stack to compile into an instruction &ndash; target-specific code can be executed. But when we mention a number by &ldquo;name&rdquo;, we first need to push it onto the stack. It seems like the host&rsquo;s number does a fine job of this. (If our target were a 64 bit machine and our host 32 bits, this might not be quite as true.)</li>
+</ul>
+<p>Once we have written all the parts of our metacompiler, the only thing left to do to start it up is to change the interpreter mode to meta-outside.</p>
+<p>In order to be able to switch among the modes defined for the metacompiler we&rsquo;ll probably want something like:</p>
+<pre>
+  outside
+  : -]   ( start the meta colon compiler)  meta-inside ;
+  :  ]   \o literal  \o -] ;
+  : :    \o name  \o -] ;
+</pre>
+<pre>
+  inside
+  : [    ( switch to outside)  meta-outside ;
+  : ^    &lt;compile return on target> ;
+  : ;    \i ^  \i [ ;
+</pre>
+<p>These are analogous to the code in <code class="forth">.forth.</code> and <code class="forth">.compiler.</code>.</p>
+<p>If <code class="forth">code</code> and <code class="forth">end-code</code> bracket an assembler definition, we might define something like this:</p>
+<pre>
+  outside
+  : code  \o name  meta-assembler ;
+</pre>
+<pre>
+  assembler
+  : end-code  meta-outside ;
+</pre>
+<h2 id="the-janus-effect-or-the-two-faces-of-defining-words"><a href="#the-janus-effect-or-the-two-faces-of-defining-words">The Janus effect; or, the two faces of defining words</a></h2>
+<p>A subtle and terribly confusing aspect of metacompilers is the definition of defining words, like <code class="forth">:</code> and <code class="forth">variable</code>. The trouble stems from their dual nature: they have two faces, one facing the host Forth, and one facing the target.</p>
+<p>All defining words are, by definition, create/does> words. Normally what happens between <code class="forth">create</code> and <code class="forth">does></code> is that we write code to build a data structure, and between <code class="forth">does></code> and <code class="forth">;</code> we write code that is executed to do something with the data. The difficulty is that, in a metacompiler, the words between <code class="forth">create</code> and <code class="forth">does></code> execute <em>on the host</em>, and the words between <code class="forth">does></code> and <code class="forth">;</code> execute <em>on the target</em>.</p>
+<p>We are already confused enough by the aliasing of word names that naturally happens in a metacompiler; now we have to deal with words (defining words) that draw from two (or more) different sets of words, and have several distinct time phases built into them as well! Yow!</p>
+<p>This potential for utter confusion led me to move away from my past efforts at &ldquo;ease&rdquo; and &ldquo;naturalness&rdquo; in the writing of defining words, towards a more explicit way that requires the author to specify the source of all non <code class="forth">.forth.</code> words.</p>
+<p>The best way to illustrate is with an example, followed by a discussion of each token and its execution behavior.</p>
+<p>Let&rsquo;s define a target defining word for arrays. Like all target defining words, it goes into <code class="forth">.outside.</code>.</p>
+<pre>
+  outside
+  : array  \o create  \o ram  swap  \o cells  \o allot
+           \o does>
+</pre>
+<p>Of course here my beautiful system breaks down.</p>
+<p>I need a special <code class="forth">does></code> for defining words.</p>
+<p>So, you see that meta-compilation is hard. I&rsquo;ve thought about this many times over many years, and I still can&rsquo;t get it right. ;-)</p>
+<h2 id="the-end"><a href="#the-end">The end</a></h2>
+<p>I hope this helped to explain how muforth works and why I think it&rsquo;s cool. I hope you&rsquo;ll think it&rsquo;s cool too, and use it to do interesting things!</p>
+<p>I&rsquo;d love to get <a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%20README">feedback</a> on the ideas here.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%20README">Send feedback</a> on this page (last edited 2015 April 19 09:21)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>

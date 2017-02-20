@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="2010, journal, blog" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/2010/" />
+<title>2010 journal &ndash; muFORTH</title>
+</head>
+<body>
+
+<div id="header">
+<h1>2010 journal</h1>
+<hr />
+</div>
+
+<div id="content">
+<h3 id="july-12-23:07"><a href="#july-12-23:07">2010 July 12 23:07</a></h3>
+<h4 id="rumours-of-muforths-death-are-exaggerated"><a href="#rumours-of-muforths-death-are-exaggerated">Rumours of muFORTH&rsquo;s death are exaggerated</a></h4>
+<p>While it might <em>appear</em> that work on muFORTH has ceased entirely, such appearances are mere illusion. A look at the <a href="http://github.com/nimblemachines/muforth/graphs/contributors/">Github repo</a> will show several bursts of activity. I spent most of September &amp; October of 2009 working feverishly on the HC08 and HCS08 support, developing a nifty simple bootloader for the chips, and mastering eldritch art of programming the flash memory (which is different on the two families!).</p>
+<p>Then, this past February, I returned to the <a href="http://github.com/nimblemachines/muforth/commits/master/mu/target/ARM">ARM support</a> and hacked feverishly on <em>that</em> for a month or so &ndash; creating a completely new target compiler, and re-writing and augmenting the ARM kernel to be direct-threaded (rather than subroutine-threaded), and self-hosting. That was the first time I had written a target compiler that compiles names (ie, a dictionary) on both the host and target. The definitions of defining words in such a system really become mind-bending...</p>
+<p>I&rsquo;m currently experimenting with some novel (for muFORTH) features, such as 32-way hashing of the dictionary, robust &amp; portable double number support (in C &ndash; God help me), and a refactoring of the &ldquo;platform&rdquo; support code (so muFORTH could, in principle, run on non-*nix-alike platforms).</p>
+<p>I look forward to someday returning to the HC08 work. I was having a great time last fall working on it, and still have high hopes for using the chips in practice.</p>
+<p>Stay tuned!</p>
+<hr />
+<p>Read the <a href="/2009/">2009 journal</a>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%202010%20journal">Send feedback</a> on this page (last edited 2016 October 03 15:32)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>

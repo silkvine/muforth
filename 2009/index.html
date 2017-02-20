@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="2009, journal, blog" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/2009/" />
+<title>2009 journal &ndash; muFORTH</title>
+</head>
+<body>
+
+<div id="header">
+<h1>2009 journal</h1>
+<hr />
+</div>
+
+<div id="content">
+<h3 id="january-23-17:34"><a href="#january-23-17:34">2009 January 23 17:34</a></h3>
+<h4 id="freescale-forums-save-me-again"><a href="#freescale-forums-save-me-again">Freescale forums save me again</a></h4>
+<p>When I started the <a href="/2009/#january-11-17:37">long bootstrapping process</a> (that I&rsquo;m still deeply mired in) I initially had trouble getting my breadboarded 908QB8 to talk to the serial port. (These parts have a bulit-in ROM monitor that bitbangs a serial protocol on a port pin.) After a day or so of going crazy, I found <a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=5854">this thread</a> on the 8-bit forum about the 908 parts requiring a really clean power-on reset (POR). Vdd needs to go to within a few tens of millivolts of ground before it comes back up.</p>
+<p>I measured Vdd with the power disconnected from my breadboard, and, sure enough, it was stuck at 2v or so. The (cheap) voltmeter I used to measure this quickly discharged the on-board capacitors, and I got a good POR that way, and was able to get into the ROM monitor and talk to the chip.</p>
+<p>By adding, between Vdd and Vss, a reversed-biased diode in series with a small resistance, I was able to get reliable resets. I would never had figured this out without the forum.</p>
+<p>I&rsquo;ve run into trouble in the second stage of my bootstrap as well: getting the 908QB8 to act as a background debug mode (BDM) host, talking to an S08QG8. I can measure BDM SYNC pulses with <em>some</em> measure of reliability and repeatability, but I can&rsquo;t seem to get anything out of the background debug controller (BDC) on the S08.</p>
+<p>Last night, while perusing the 8-bit forum for more posts about &ldquo;trouble&rdquo; with the DEMO boards&rsquo; built-in BDM interfaces, I stumbled across a link to <a href="http://forums.freescale.com/freescale/board/message?board.id=OSBDM08&amp;thread.id=136">my answer</a>. It turns out that <em>blank</em> S08QG chips have to be powered up into <em>active background mode</em>, by holding the BKGD/MS (MS means &ldquo;mode select&rdquo;) pin LOW during POR. I&rsquo;m doing nothing of the kind. I plug a cable into a 4-pin header on the breadboard, and everything powers up at the same time. The 908 comes up fine every time, but apparently the S08QG (and other low-pin-count devices that lack a dedicated RESET pin) are a bit hard to get reliably into BDM when they are blank. They power up and start executing random code &ndash; unprogrammed Flash, peripheral registers &ndash; and continually either experience COP (computer operating properly &ndash; ie, watchdog) resets or illegal instruction resets. There isn&rsquo;t a long enough window between resets to get the device into active BDM mode &ndash; the protocol takes long enough that it&rsquo;s basically not possible.</p>
+<p>So I need to fashion a way to power cycle the S08 from the 908. Initially I&rsquo;m going to jumper it by hand, just to make sure this works.</p>
+<p>Another side effect of powering up an S08QG in active BDM, is that its BDC operates from a 4Mhz clock (the bus clock) rather than the dedicated &ldquo;alternate BDC clock&rdquo;, which is 8MHz out of reset. My 908 is running at 3.2MHz, and I figured out that bitbanging BKGD would be too slow, if the target is running at 8Mhz. So I dug up a 25Mhz crystal and fashioned an oscillator, so I could run my 908 at 6.25Mhz (bus clock).</p>
+<p>Now I can go back to a simple setup, since my 3.2Mhz 908 is going to be plenty fast to talk to a 4Mhz S08.</p>
+<p>Sorry about all the acronyms!</p>
+<hr />
+<h3 id="january-18-20:11"><a href="#january-18-20:11">2009 January 18 20:11</a></h3>
+<h4 id="is-the-freescale-ecosystem-healthy"><a href="#is-the-freescale-ecosystem-healthy">Is the Freescale ecosystem healthy?</a></h4>
+<p>I&rsquo;m a bit worried about it.</p>
+<p>It seems that Freescale or <a href="http://www.pemicro.com/">P&amp;E Micro</a> are intentionally hobbling the USB-BDM interfaces on Freescale&rsquo;s DEMO boards, forcing people to buy development hardware that they don&rsquo;t need &ndash; like an external <a href="http://www.pemicro.com/products/product_viewDetails.cfm?product_id=33">USB-Multilink</a>.</p>
+<p>One of Freescale&rsquo;s avowed <a href="http://www.freescale.com/files/abstract/article/FS_FUNDAMENTALS.html">core values</a> is &ldquo;to be the most ethical company in the business&rdquo;. I think they have some self-reflection to do here, and in fact I think the user community needs to take them to task.</p>
+<p>Folks in the ARM world crow about the &ldquo;ARM ecosystem&rdquo; and how wonderful it is to have multiple chip, development board, and software tool vendors. It was something that attracted me to the ARM architecture for a long time.</p>
+<p>The 8-bit world is different. Except for the 8051, the popular 8-bit architectures &ndash; HC08, PIC, AVR &ndash; are single-sourced. Every architecture has a development tool story as well. Except for AVR, there are few to no free tools for the 8-bit chips.</p>
+<p>In the Freescale world, people pretty much use <a href="http://www.freescale.com/webapp/sps/site/homepage.jsp?nodeId=012726">CodeWarrior</a> (CW) exclusively, and it&rsquo;s easy to buy relatively inexpensive ($50 to 100) &ldquo;demo&rdquo; boards from Freescale to try out a chip family. There is a free version of CW, but it is limited in the code size that it will compile. That&rsquo;s another story, and it deserves its own post.</p>
+<p>I found out about this &ldquo;hardware hobbling&rdquo; by doing some research on Freescale&rsquo;s <a href="http://forums.freescale.com/freescale/board?board.id=8BITCOMM">8-bit processor forum</a>. I was considering buying a <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=DEMOJM">DEMOJM</a> board. This is a &ldquo;motherboard&rdquo;, with built-in USB-to-BDM converter, some i/o, and a square of headers to plug a doughtercard into. It comes with two daughtercards: one for the S08JM60, and one for the MCF51JM128 (a ColdFire part). It looks like a good way to get started with the JM family &ndash; these are the nifty USB parts &ndash; and because it has a built-in USB-BDM, I figured I could use it to program parts from other families &ndash; at least other 5v parts.</p>
+<p>But I found some alarming posts on the forum. People were asking &ldquo;can I use a DEMOxx board to program other parts?&rdquo; and others were responding &ldquo;sure, the DEMOxx has a full USB-BDM interface built in.&rdquo; Then the trouble started. Someone with a DEMOQE board &ndash; which, like the DEMOJM comes with two daughtercards &ndash; couldn&rsquo;t program, using the built-in USB-BDM, anything other than the chips on the daughtercards. <em>These were <a href="http://www.nimblemachines.com/freescale-s08qe/">S08QE</a> chips too &ndash; not chips from some other family.</em></p>
+<p>It turns out that the latest version of CodeWarrior &ndash; version 6.2 &ndash; has code that intentionally breaks these boards! It&rsquo;s possible, by replacing a few DLLs, to fix the problem.</p>
+<p>I <em>really</em> think that the community needs to let Freescale know that this kind of thing is hardly ethical behaviour. I don&rsquo;t want my black-box dev tools, when upgraded, to silently break perfectly good hardware that I&rsquo;ve legitimately purchased! At the very least this creates confusion and leaves a bad taste. &ldquo;This used to work; why doesn&rsquo;t it work any more?&rdquo; Or, &ldquo;this board has a USB-BDM; I bet I can use that on these other chips!&rdquo; There is no official explanation, when it doesn&rsquo;t work, about <em>why</em>, and I think this needs to be remedied.</p>
+<p>Having had the experience of trying something that should work, but doesn&rsquo;t, people are going to respond in one of three ways &ndash; none of them good:</p>
+<ul>
+<li>give up on Freescale and go elsewhere</li>
+<li>grumble, buy a USB-Multilink, and continue with Freescale, but with a sour taste</li>
+<li>learn the truth &ndash; that this is intentional breakage &ndash; and get angry</li>
+</ul>
+<p>In chronological order, here are a few threads from the forum that document all this craziness.</p>
+<ul>
+<li><a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=11918">MC9S08SH8 on a DEMO9S08QG8 board</a></li>
+<li><a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=12650">Trouble programming JM32 with DEMOQE</a></li>
+<li><a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=12865">Using demo boards as BDM interfaces</a></li>
+<li><a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=12921">Embedded DEMOQE BDM is a full Multilink?</a> &ndash; explains how to &ldquo;fix&rdquo; a 6.2 version of CW</li>
+<li><a href="http://forums.freescale.com/freescale/board/message?board.id=8BITCOMM&amp;thread.id=13110">PROBLEM TO PROGRAM A MC9S08QE128 CHIP USING DEMOQE BOARD</a></li>
+</ul>
+<hr />
+<h3 id="january-18-13:39"><a href="#january-18-13:39">2009 January 18 13:39</a></h3>
+<h4 id="is-coldfire-next"><a href="#is-coldfire-next">Is ColdFire next?</a></h4>
+<p>I spent several hours yesterday carefully reading ColdFire documentation, trying to understand what it was Freescale had accomplished, or at least what they left out of the 68000 to make ColdFire. You have to do more than glance thru the new instruction set. I did that a few weeks back and didn&rsquo;t get the sense that much had changed.</p>
+<p>It turns out they left out a <em>lot</em>. But not in a bad way. Now the architecture really is much more a RISC-like load-store machine.</p>
+<p>Operand size changes:</p>
+<ul>
+<li>except for CLR, TST, and MOV, and a few inherently byte-oriented instructions (such as Scc and TAS), all instructions only work on long operands</li>
+</ul>
+<p>Addressing mode changes:</p>
+<ul>
+<li>single operand instructions &ndash; NEG, NOT, ASL, ASR, etc &ndash; and immediate instructions &ndash; ANDI, ORI, etc &ndash; only work on D registers</li>
+</ul>
+<p>Instructions left out entirely:</p>
+<ul>
+<li>BCD arithmetic (no surprise)</li>
+<li>DBcc &ndash; decrement and branch</li>
+<li>CHK</li>
+<li>CMPM</li>
+<li>EXG</li>
+<li>MOVEP</li>
+<li>RESET</li>
+<li>ROL, ROR, ROXL, and ROXR (hmm &ndash; because they don&rsquo;t exist in C?)</li>
+<li>RTD, RTR</li>
+<li>TRAPV &ndash; again, we&rsquo;re programming in C, not Pascal ;-)</li>
+</ul>
+<p>Instructions added:</p>
+<ul>
+<li>BITREV</li>
+<li>BYTEREV</li>
+<li>FF1 (find first one bit)</li>
+<li>MOV3Q (move 3 bit immediate to EA)</li>
+<li>MVS (move with sign-extend)</li>
+<li>MVZ (move with zero-extend)</li>
+<li>TPF &ndash; trap false &ndash; a nop that can consume one or two following instructions!</li>
+</ul>
+<p>Because the JM family (the USB parts) has ColdFire parts as well as S08, and they are not much more expensive &ndash; I may be experimenting with Forth on the ColdFire too. Especially if I get a <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=JMBADGE">JMBADGE</a>.</p>
+<hr />
+<h3 id="january-16-13:46"><a href="#january-16-13:46">2009 January 16 13:46</a></h3>
+<h4 id="its-all-about-the-timing"><a href="#its-all-about-the-timing">It&rsquo;s all about the timing</a></h4>
+<p>I think my current interest in Freescale&rsquo;s HC08 has everything to do with <em>timing</em>. I&rsquo;ve looked at the architecture before, and haven&rsquo;t been excited about it until now.</p>
+<p>In fact, I&rsquo;ve looked at it several times, initially in 2001 or 2002. I was overwhelmed then with how many families there were, and the lack of easily available development hardware. Also, the parts at that time were quite slow &ndash; I believe this was before the introduction of the S08. I ended up instead buying a Cygnal (now <a href="http://silabs.com/)">SiLabs</a> board, which I played around with a tiny bit. I was impressed with the idea of an 8-bit CPU running at 25MHz, but unimpressed with the idea of writing code for the 8051. And their parts are $15 in quantity one. The <a href="http://www.nimblemachines.com/freescale-s08jm/">S08JM32</a> &ndash; a pretty comparable part, running at 24MHz, with 12-bit ADC, and the added joy of a USB interface &ndash; is $3 in quantity one.</p>
+<p>I just discovered Freescale&rsquo;s agitprop zine <a href="http://www.freescale.com/webapp/sps/site/homepage.jsp?code=LPBEYONDBITS">Beyond Bits</a>, which has been published for the past three summers. Looking at back issues I realised that only now is their lineup compelling to me. The JM USB parts are new, the Flexis (AC, JM, QE) are new. The S08 is fairly new. All of this is recent.</p>
+<p>When I looked at the HC08 in 2006, and sampled the 908QB8 and S08QG8 parts, there were very few parts that seemed interesting. For my purposes (wanting DIP16, wanting small package etc) these were really the only matches. They seemed like nice parts, but I wasn&rsquo;t impressed that this was an architecture I could really grow with. There was a way better selection then of PIC and AVR parts, esp in DIPs.</p>
+<p>Now things are dramatically different. I&rsquo;m looking forward to digging deeply into this architecture!</p>
+<hr />
+<h3 id="january-14-21:54"><a href="#january-14-21:54">2009 January 14 21:54</a></h3>
+<h4 id="putting-forth-on-the-freescale-s08"><a href="#putting-forth-on-the-freescale-s08">Putting Forth on the Freescale S08</a></h4>
+<p>I&rsquo;ve been looking, literally for years, for an 8-bit microcontroller to get excited about, dig into deeply, and turn into a <a href="http://www.nimblemachines.com/convivial-tool/">convivial tool</a>. I still haven&rsquo;t found what I&rsquo;m looking for (apologies to U2 and Negativland!) and went as far as writing an essay entitled "<a href="http://www.nimblemachines.com/eight-bit-microcontrollers-are-obsolete/">Eight bit microcontrollers are obsolete</a>", based mostly on my belief that the ARM7 was going to be the next 8051.</p>
+<p>I still <em>really</em> like the little 8-bit machines. They are cheap &ndash; still cheaper than their 32-bit &ldquo;cousins&rdquo; &ndash; and are much more approachable by novices to the art &ndash; something that is actually important to me, as I&rsquo;m not thinking about using them as black boxes buried deep inside something else &ndash; the classic embedded control model &ndash; but instead as paint and canvas. I want them to be convivial tools &ndash; both for me and for others as well.</p>
+<p>Recently disillusioned with the ARM world &ndash; both ARM7 and Cortex-M3 &ndash; and irritated again with the PIC and AVR options &ndash; the PICs are too expensive, and AVRs have crummy Flash, and are also expensive &ndash; I recently took another deep look at Freescale&rsquo;s HCS08 families, and for the most part liked what I saw.</p>
+<h4 id="what-can-these-materials-do"><a href="#what-can-these-materials-do">What can these materials do?</a></h4>
+<p>Before getting into the meat of things, I&rsquo;d like to acknowledge something that Steve Davee said in his recent <a href="http://dorkbotpdx.org/wiki/dorkbotpdx_0x02">DorkbotPDX talk</a> that continues to inspire me. He was talking about teaching art to kids. Instead of putting a bunch of art materials in front of them and saying &ldquo;What can <em>you</em> do with these materials?&rdquo; &ndash; which would cause me, even as an adult, to freeze up creatively &ndash; he says &ldquo;What can these materials do? Let&rsquo;s find out!&rdquo;</p>
+<p>That&rsquo;s what I feel I&rsquo;m doing right now. I&rsquo;m exploring the HCS08 with the mantra in my head: <em>What can these materials do?</em></p>
+<p>I&rsquo;m finding it very helpful, and also sustaining.</p>
+<h4 id="shoehorning-forth"><a href="#shoehorning-forth">Shoehorning Forth</a></h4>
+<p>What are the issues we face when considering putting Forth on the S08?</p>
+<p>When figuring out how to put Forth on <em>any</em> architecture, there are two main issues to consider, and they are intertwingled:</p>
+<ul>
+<li>native or threaded code?</li>
+<li>how are we using the registers?</li>
+</ul>
+<p>With the HC08, there are so few index (pointer) registers, that any kind of threading, while possible, seems inordinately expensive. The HX register will have to double duty (at least) as the IP and a stack pointer; all the saving &amp; restoring will take time; and it will prove difficult &ndash; as in the case of NEST, which needs to push the IP onto the return stack &ndash; to have a &ldquo;place to stand&rdquo; as we&rsquo;re copying values around.</p>
+<p>Don&rsquo;t get me wrong &ndash; it&rsquo;s doable, and may even be worth doing. But the high overhead doesn&rsquo;t appeal to me. I&rsquo;d like Forth on this machine to rival C &ndash; and it might even beat it.</p>
+<p>Native code compilation means that the body of a high-level word (a so-called &ldquo;colon&rdquo; word, because they are defined by the <code class="forth">:</code> operator) is going to be simply code &ndash; mostly a series of calls to other pieces of code.</p>
+<p>It&rsquo;s sometimes useful even when not doing any kind of threading to represent literals in the normal Forth way:</p>
+<pre>
+    jsr push_literal
+    &lt;literal value>
+</pre>
+<p>Again, on this architecture, the overhead of popping an address (to get the address of the literal), fetching both bytes, and pushing them onto the data stack, is quite unappealing. On a machine with more registers, we would simply do one or more load immediates, and then call or jump into the word that expects a literal. On the HC08 there is only one 8-bit register free for this purpose: the accumulator (A). This works fine for 8-bit literals. But what about 16-bit?</p>
+<p>I found a nice solution, but before I explain it, let&rsquo;s talk about the register allocation. Because we are compiling native-code, the hardware stack is the return stack, and we simply use jsr/rts to do our &ldquo;threading&rdquo;. There is only one option for the data stack pointer, and that&rsquo;s HX, which will occasionally have to do double duty as a generic pointer register, and in those cases we&rsquo;ll have to save and restore its value around these other uses so we don&rsquo;t clobber the data stack pointer. That&rsquo;s overhead we&rsquo;ll have to live with.</p>
+<p>We can reduce it somewhat by adopting the convention that the data stack lives in the zero page. In this case, H is always 00, and X is really the stack pointer. (Just like the HC05 from which the HC08 is descended!) When we have to use HX to point to arbitrary locations, we only have to save X; when we&rsquo;re done with HX, we restore X, and clear H (which only takes one cycle, instead of the three or more needed to restore its value from the R stack or memory). I&rsquo;ll try it both ways and maybe try to measure the performance difference.</p>
+<p>So, given that HX points to the data stack, we could adopt the (obvious) convention that 0,x and 1,x are the top of stack; 2,x and 3,x are the second; etc. But it turns out that wonderful things happen if we instead pre-allocate a 16-bit cell as <em>scratch space</em> at the top of the stack. The real top moves to 2,x and 3,x; and second moves to 4,x and 5,x.</p>
+<p>Why is this so useful?</p>
+<p>Because we are so register starved, it&rsquo;s often nice to have an &ldquo;extra hand&rdquo; &ndash; a place to put a byte of literal data, a count, the saved value of A, etc. Having this scratch space available makes programming in assembler much easier, and it allows for the arithmetic and logical operators to share code between their literal and non-literal versions. I&rsquo;ll explain.</p>
+<p>Let&rsquo;s first look at the code for + (add), which consumes the top two values on the stack, adds them, and pushes the result. Another way to think about it is that it pops the top value and adds it to the second, making the sum the new top. Here is add:</p>
+<pre>
+    ; stack (,x) offsets - this is a big-endian machine!
+    ; 0  scratch_hi
+    ; 1  scratch_lo
+    ; 2  top_hi
+    ; 3  top_lo
+    ; 4  second_hi
+    ; 5  second_lo
+</pre>
+<pre>
+    add:      lda 3,x    ; top_lo into A
+              aix #2     ; add 2 to HX; top becomes scratch; second becomes top
+    add_imm:  add 3,x    ; A = top_lo + prev_top_lo
+              sta 3,x
+              lda 0,x    ; scratch_hi = old top_hi
+              adc 2,x    ; add top_hi
+              sta 2,x    ; save sum_hi
+              rts
+</pre>
+<p>I can write subtract, and, or, xor the same way. What&rsquo;s neat about this is that instead of calling add to add two values on the stack, I can add a literal to the top value by doing this:</p>
+<pre>
+    lda #lit_hi
+    sta 0,x     ; save in scratch_hi
+    lda #lit_lo
+    jsr add_imm
+</pre>
+<p>There is a subtle correspondence here. The literal version loads the high half of the literal into scratch_hi (0,x), and the low half into A, then calls add_imm. The code at <code>add</code> does a very similar thing: it loads top_lo into A, and leaves top_hi where it is; but by popping the stack, top_hi &ldquo;moves&rdquo; into scratch_hi, where add_imm expects it &ndash; but it hasn&rsquo;t actually moved! It just &ldquo;happens&rdquo; to end up in the right place.</p>
+<p>I think this is a <em>very</em> neat solution to the problem of having too few registers on the HC08. I wonder if any other compilers leave this kind of &ldquo;scratch space&rdquo; on the stack by convention? I&rsquo;m stunned at how useful it is.</p>
+<p>However, it doesn&rsquo;t end there! We can do more. By recognising that each byte of a bitwise logical operation is independent, if we want to compile a logical op with a literal value that only affects one byte, we can inline:</p>
+<pre>
+    lda #$FE
+    and 2,x     ; and with top_hi
+    sta 2,x
+</pre>
+<p>On a threaded Forth with two-byte (16 bit) literals, this would take six bytes of code &ndash; which is exactly what our inline version takes! But it runs <em>much</em> faster.</p>
+<p>We can do this optimisation if we are adding or subtracting a literal with zeroes in the low byte. Carry propagates from less significant bits upward, not the other way! So there is no way that an add or subtract in the high byte can affect the low byte.</p>
+<p>We can make another small optimisation as well. Loading a full 16-bit literal (into A and scratch_hi) takes 5 bytes. What about shorter literals? Are there other (shorter) code sequences we can use? It turns out that there are. For literal values between $FF00 (-256) and $01FF (511) we can load the value in 3 or 4 bytes. Here is the code:</p>
+<pre>
+    clr 0,x     ; clear scratch_hi
+    lda #lo     ; low half of literal
+                ; for values between 0 and $FF; 3 bytes
+</pre>
+<pre>
+    clr 0,x     ; clear scratch_hi
+    com 0,x     ; scratch_hi = FF; we could use dec 0,x as well
+    lda #lo     ; low half of literal
+                ; for values between $FF00 and $FFFF; 4 bytes
+</pre>
+<pre>
+    clr 0,x     ; clear scratch_hi
+    inc 0,x     ; scratch_hi = 01
+    lda #lo     ; low half of literal
+                ; for values between $0100 and $01FF; 4 bytes
+</pre>
+<p>These code sequences are short because the &ldquo;indexed with zero offset&rdquo; instructions are only a byte long!</p>
+<p>One last comment about literals. Mostly we want to load a literal value and then call some code that consumes it, and we avoid pushing it onto the stack first. On the rare occasions that we want to <em>leave</em> a literal value on the stack &ndash; as a return value or flag, eg &ndash; we simply compile the load literal, as above &ndash; either 16-bit or 8-bit versions &ndash; followed by code to &ldquo;push&rdquo; the loaded literal, which is these two instructions:</p>
+<pre>
+    sta 1,x     ; save literal_lo in scratch_lo
+    aix #-2     ; "promote" scratch to top by allocating a stack cell
+</pre>
+<p>I think this is pretty compelling demonstration that with a bit of thought and cleverness we can fit Forth pretty nicely on this machine. I&rsquo;m hoping it won&rsquo;t take up too much space, and that it&rsquo;ll run like a cat with its tail on fire! (apologies to PETA and the SPCA).</p>
+<hr />
+<h3 id="january-11-17:37"><a href="#january-11-17:37">2009 January 11 17:37</a></h3>
+<h4 id="deep-in-a-multi-stage-bootstrap"><a href="#deep-in-a-multi-stage-bootstrap">Deep in a multi-stage bootstrap</a></h4>
+<p>I&rsquo;m trying something slightly crazy, and progress is going slowly.</p>
+<p>I want to get Forth and a simple USB bootloader running on Freescale&rsquo;s S08JM parts. But instead of doing that the easy way, and buying P+E Micro&rsquo;s USB Mulitlink programmer, I decided it would be <em>interesting</em> to see if I can bootstrap from nothing.</p>
+<p>Well, not quite nothing. But to explain <em>that</em> I have to explain some history. The HC08 is really two sub-families: the original HC08 and the newer HCS08. I refer to these here as &ldquo;908&rdquo; and &ldquo;S08&rdquo;. (The &ldquo;9&rdquo; means Flash memory, rather than ROM or OTP EPROM. The 908 and S08 parts both use the same Flash.)</p>
+<p>The S08s are nicer in almost every respect than the 908s, but they are harder to bootstrap. In fact, without the use of another microcontroller they are basically <em>impossible</em> to bootstrap. Rather than having a bootloader in ROM, like the 908s, they have a piece of hardware on-chip &ndash; the <em>background debug controller</em> (BDC). This bit of logic is really a poor man&rsquo;s JTAG. It allows access to the CPU registers, can start and stop the core, read and write memory, and because it can do all these things, it can run code that writes to Flash.</p>
+<p>These are really nice features, but the downside is that the custom protocol required to talk to the BDC needs to be driven, with fairly tight timing, by another microcontroller.</p>
+<p>Could I use a 908 to bootstrap an S08?</p>
+<p>In 2006 I sampled two flavors of 8k Flash, DIP16 parts: the 908QB8, and the S08QG8. Since the 908 has a built-in bootloader, I thought I would start by talking to it, then put just enough code on the 908 to talk the BDC protocol to program the S08... Then put a nice, simple, UART-based bootloader on <em>that</em> chip that I could use to program the S08JM parts &ndash; my eventual goal. A long road, but mostly an interesting one.</p>
+<p>I met with some initial success. Using two resistors and an HCT244 I was able to connect an RS232 level converter to the 908&rsquo;s PTA0, which the bootloader bitbangs at 9600 bps.</p>
+<p>I wrote a bit of Forth code that allowed me to read and write memory, the registers on the stack, and was able within a couple of days of fiddling around to download code into RAM and run it successfully.</p>
+<p>Flushed with success, I breadboarded an S08QG8 next to the 908QB8. Since most of the S08 families run at 3v (1.8 to 3.6), I had a voltage-conversion problem. Since I already had an HCT244 on the breadboard, I thought I would use that in the S08 to 908 direction, since the HCT input levels will be just about right for 3v logic. Driving the S08&rsquo;s BKGD pin to 3v is a bit trickier, and I&rsquo;m not sure I&rsquo;ve come up with a good way to do it.</p>
+<p>Freescale describe the BDC protocol as &ldquo;quasi-open-drain&rdquo;. Since it&rsquo;s a one-wire protocol with multiple senders, it needs to have a pullup to Vdd (which is internal to the S08), and the senders need to be able to drive it high, drive it low, and 3-state it.</p>
+<p>My approach involved using three port pins: one directly connected to BKGD to pull it low; and a voltage divider between two others &ndash; one driven high and one low &ndash; that would put approx 3v on BKGD. This doesn&rsquo;t seem to work, and I&rsquo;m not sure why.</p>
+<p>Of course, there is another issue that I haven&rsquo;t mentioned that consumed quite a bit of time to debug. Since the BDC protocol is based on the <em>target&rsquo;s</em> clock speed &ndash; each bit transmitted taking 16 BDC cycles &ndash; I need to drive BKGD fast enough to keep up with the target. The &ldquo;host&rdquo; &ndash; in this case the 908QB8 &ndash; has an internal oscillator that at the fastest setting yields a bus clock (instruction clock) of 3.2MHz. The 9S08QG8 runs its BDC clock at 8MHz. The tightest code I could write for sending and receiving bits was too slow, so I spent a bunch of time debugging oscillator settings.</p>
+<p>After finding a 25Mhz crystal, I&rsquo;m now running the 908 with a 6.25MHz bus clock, which is fast enough to keep up &ndash; but it still doesn&rsquo;t work.</p>
+<p>Which is why I thought I&rsquo;d take a break and document my progress, instead of driving myself crazy.</p>
+<hr />
+<p>Read the <a href="/2008/">2008 journal</a>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%202009%20journal">Send feedback</a> on this page (last edited 2016 October 03 15:32)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>

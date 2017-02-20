@@ -1,0 +1,296 @@
+/*
+ * Style sheet for muforth.nimblemachines.com
+ */
+
+/* Import some awesome fonts! */
+@import url('https://fonts.googleapis.com/css?family=Droid+Serif:400,400i,700,700i|Fira+Mono:400,500,700|Fira+Sans:300,400,500,600,700&subset=latin-ext');
+
+
+/* Margins etc specified as top right bottom left */
+
+
+/* Default styles for all devices */
+body {
+  margin: 0.5em;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
+  font-variant-numeric: lining-nums proportional-nums;
+}
+
+a:link, a:visited, a:active, a:hover {
+  text-decoration: underline;
+}
+
+a:link, a:active, a:hover {
+  color: #334466;
+}
+
+a:visited {
+  color: #663366;
+}
+
+div#header, div#content, div#footer {
+  margin: 1em 0 0 0;
+}
+
+
+/* desktop-ish device? */
+/* XXX this value from Twitter Bootstrap */
+/* @media (min-width: 992px) { */
+@media (min-width: 900px) {
+body {
+  /*  border: blue solid 1px; */
+  margin: 0px;
+}
+
+div#header, div#content {
+  margin: 1pc 3pc 0pc 8pc;
+  width: 42pc;
+}
+
+/* XXX until until I change the footer style... */
+div#footer {
+  margin: 1pc 3pc 2pc 8pc;
+  width: 42pc;
+}
+
+} /* end @media desktop-ish */
+
+
+a img {
+  border: none;
+}
+
+div#footer a img {
+  margin: 0px 10px 0px 0px;
+}
+
+img#icon {
+  /* border: solid black 1px; */
+  margin:  0 0 0 0;
+  padding: 0;
+  float: right;
+}
+
+div#header {
+  color: #444444;
+}
+
+div#header h1 {
+/*  border: solid blue 1px; */
+  margin: 0 0 0 0;
+  padding: 0;
+  color: #334466;
+  font-family: Fira Sans, sans-serif;
+  font-weight: 400;
+  font-size: 320%;
+  letter-spacing: -0.05em;
+  word-spacing: 0.1em;
+}
+
+div#header h1 a {
+  color: #334466;
+}
+
+div#header hr {
+  margin: 0;
+  border: solid #334466;
+  border-width: 2px 0 0 0;
+}
+
+pre {
+  clear: right;  /* so it can't run into icon */
+}
+
+div#content {
+/*  border: solid green 1px; */
+/*  background: #eeeecc; */
+  color: #444444;
+  font-family: Droid Serif, serif;
+  font-weight: 400;
+}
+
+div#content p, div#content ol, div#content ul {
+  line-height: 1.5;
+}
+
+div#footer {
+  clear: right;  /* so it can't run into icon */
+/*  border: solid teal 1px; */
+/*  background: #cceeee; */
+  color: #777777;
+/* font-size: 80%; */
+  font-family: Droid Serif, serif;
+  font-weight: 400;
+  font-style: italic;
+/*  background-color: #336699; */
+/*  text-align: center; */
+/*  color: white; */
+}
+
+div#content h2, div#content h3, div#content h4, div#content h5, div#content h6 {
+  margin-top: 0.33em;
+  margin-bottom: 0.16em;
+/*  border: black solid 1px; */
+  font-family: Fira Sans, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: #334466;
+}
+
+/*
+ * Since headings in the content now link to themselves (so it's easy to
+ * bookmark or share links into pages), style the <a> elements like text, not
+ * links.
+ */
+div#content h2 a, div#content h3 a, div#content h4 a, div#content h5 a,
+div#content h6 a {
+  text-decoration: none;
+  color: #334466;
+}
+
+div#content h2 { font-size: 240%; }
+div#content h3 { font-size: 200%; }
+div#content h4 { font-size: 160%; }
+div#content h5 { font-size: 125%; }
+div#content h6 { font-size: 100%; }
+
+div#content p {
+/*  border: black solid 1px;*/
+  margin-top: 0pt;
+  margin-bottom: 1em;
+}
+
+/* hrules in the document can be styled separately from the footer hrule */
+div#content hr {
+  border: solid #444444;
+  border-width: 1px 0 0 0;
+  margin: 1em 0; /* vert horz */
+}
+
+div#footer hr {
+  border: solid #777777;
+  border-width: 1px 0 0 0;
+  margin: 1pc 0;
+}
+
+div.voice2 /*, div.voice2 a */ {
+  color: #777777;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice3 /*, div.voice3 a */ {
+  color: #4444aa;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice4 /*, div.voice4 a */ {
+  color: #aa4444;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice5 /*, div.voice5 a */ {
+  color: #44aaaa;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice6 /*, div.voice6 a */ {
+  color: #aa44aa;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice7 /*, div.voice7 a */ {
+  color: #aaaa44;
+  margin: 0 -1pc 0 1pc;
+}
+
+div.voice8 /*, div.voice8 a */ {
+  color: #aaaaaa;
+  margin: 0 -1pc 0 1pc;
+}
+
+blockquote {
+  margin: 15px 30px 0 10px;
+  padding-left: 20px;
+  border-left: 5px solid #ddd;
+}
+
+/* Let's make code and pre look good. */
+code, pre {
+  font-family: Fira Mono, monospace;
+  font-size: 100%;
+}
+
+pre {
+  margin: 1.5em 0;
+  font-size: 100%;
+}
+
+/* man page links */
+code.man {
+  font-family: Droid Serif, serif;
+  font-style: italic;
+}
+
+/* git commands */
+code.git-command {
+  font-family: Droid Serif, serif;
+  font-weight: normal;
+}
+
+/* Forth markup!! (Sorry, Michael!) */
+/* For inline Forth code we want some space around the element. */
+code.forth {
+  font-weight: bold;
+  font-size: 100%;
+  margin: 0 0.2em;
+  color: #774444;
+}
+
+/* Set this up like pre, plus Forth color */
+div.voiceforth {
+  margin: 1.5em 0;
+  font-family: Fira Mono, monospace;
+  font-size: 100%;
+  color: #774444;
+}
+
+/* multiline li's are hard to read unless separated */
+div#content li {
+  margin: 0 0 0.25em 0;
+}
+
+/* comments! */
+p.comment {
+  display: none;
+}
+
+/*
+ * Support for embedded video - initially for YouTube. Others are easy to add.
+ *
+ * Code for responsive layouts sourced from
+ * http://css-tricks.com/NetMag/FluidWidthVideo/Article-FluidWidthVideo.php
+ */
+
+.youtube-container {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+  padding-top: 25px;
+  height: 0;
+  margin-top: 0;
+  margin-bottom: 1.5em;
+}
+
+.youtube-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* video caption text */
+.youtube-container p {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+}

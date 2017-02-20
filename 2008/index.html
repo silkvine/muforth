@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="2008, journal, blog" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/2008/" />
+<title>2008 journal &ndash; muFORTH</title>
+</head>
+<body>
+
+<div id="header">
+<h1>2008 journal</h1>
+<hr />
+</div>
+
+<div id="content">
+<h3 id="december-24-19:45"><a href="#december-24-19:45">2008 December 24 19:45</a></h3>
+<h4 id="i-missed-an-historic-opportunity"><a href="#i-missed-an-historic-opportunity">I missed an historic opportunity</a></h4>
+<p>I&rsquo;m working on porting Forth to Freescale&rsquo;s 908 and 9S08 parts. I got my first samples in 2006, got discouraged, and stopped working on the project. For mostly unknown reasons I&rsquo;ve been recently inspired, and have picked the work back up.</p>
+<p>Now that it&rsquo;s the <em>end</em> of 2008, I wish I had worked on it in 2007 and early 2008 so that on 2008-08-08 I could have released my code to the world!</p>
+<p>Oh well. Better late than never?</p>
+<hr />
+<h3 id="december-19-13:54"><a href="#december-19-13:54">2008 December 19 13:54</a></h3>
+<h4 id="why-am-i-bothering-with-freescales-hcs08"><a href="#why-am-i-bothering-with-freescales-hcs08">Why am I bothering with Freescale&rsquo;s HCS08?</a></h4>
+<p>If I had any sense, I would be using Atmel AVR parts. Why do I say this?</p>
+<ul>
+<li>there are a bunch of folks in dorkbotpdx using Atmel AVR, including building nifty boards, so there is local expertise and groovy local hardware available;</li>
+<li>the AVR is fast, and it&rsquo;s a good match with Forth &ndash; at least from the perspective of register allocation</li>
+<li>there are decent USB parts available, as well as low pin count DIP packages for easy experimentation.</li>
+</ul>
+<p>Why, then, am I concentrating on Freescale&rsquo;s HCS08 instead?</p>
+<p>I&rsquo;ve mentioned <a href="/2008/#december-13-16:40">elsewhere</a> that I like the 6800 heritage. It&rsquo;s nostalgic for me. But that&rsquo;s a ridiculous reason, right? So what are some <em>compelling</em> reasons to use these parts?</p>
+<h4 id="attractions-of-the-s08"><a href="#attractions-of-the-s08">Attractions of the S08</a></h4>
+<h5 id="cost"><a href="#cost">Cost</a></h5>
+<p>They are quite cheap &ndash; cheaper than comparable PIC or AVR parts &ndash; and you get a lot of bang for your buck. For instance, the S08QG parts in DIPs have a UART, SPI, and I2C, all standard, a good selection of timers, 8 channel 10 bit ADC, and some nice add-on features, such as clever compare logic in the ADC that causes an interrupt only when a value crosses a threshold. The USB parts have 12 bit ADC, 2 UARTS, and 2 SPI ports.</p>
+<p>Also, it&rsquo;s quite easy to get free samples, directly from Freescale, and also to buy directly from them, for very competitive prices, even down to quantity one.</p>
+<h5 id="flash"><a href="#flash">Flash</a></h5>
+<p>Unlike Atmel&rsquo;s Flash, which is only good to 10k cycles (if you&rsquo;re lucky) and has a short retention lifetime (10 years?), Freescale&rsquo;s Flash, like much of Microchip&rsquo;s, is good to 100k cycles and has a retention of more like 100 years. This might not sound like a big deal, esp for hobbyists, but philosophically I find it unappealing to use something so obsolescent as Atmel&rsquo;s chips.</p>
+<h5 id="von-neumann-architecture"><a href="#von-neumann-architecture">Von Neumann architecture</a></h5>
+<p>A feature that is here in the &ldquo;pro&rdquo; column but also has a dark underside. Since RAM and Flash exist in the same memory map, it&rsquo;s possible to execute code out of RAM &ndash; and in fact it is <em>necessary</em> to do so when executing code to program the Flash. Code in RAM make several things possible:</p>
+<ul>
+<li>self-modifying code</li>
+<li>&ldquo;specialised code&rdquo;, generated on the fly on the target</li>
+<li>nice interactive development &ndash; ie, the ability to define and execute new bits of code while &ldquo;online&rdquo; with the target</li>
+</ul>
+<h5 id="built-in-debug-architecture"><a href="#built-in-debug-architecture">Built-in debug architecture</a></h5>
+<p>This is an attractive feature, esp if you&rsquo;re going to use Freescale&rsquo;s development software, which can take full advantage of it.</p>
+<p>Basically, every S08 part &ndash; even the lowliest 8 pin part &ndash; has not only a background debug mode (BDM) single-pin interface (which can be used to Flash empty parts, to reprogram parts, and to debug running code!) but also a tiny built-in in-circuit emulater (ICE). There are two code breakpoints and one data watchpoint available in hardware, with sophisticated chaining available between two of them. There is also an 8 entry trace buffer, allowing the capture of address and data bus values.</p>
+<p>Considering how &ldquo;low-end&rdquo; some of these parts are, this is quite a stunning feature.</p>
+<h5 id="quality-peripherals"><a href="#quality-peripherals">Quality peripherals</a></h5>
+<p>It&rsquo;s more &ldquo;gut feeling&rdquo; than real empirics, but the quality and flexibility of the on-chip peripherals seems very high, compared to AVR and PIC. Maybe when I re-develop all my code for AVR I&rsquo;ll have harder data on this one. ;-)</p>
+<h5 id="upward-migration-path"><a href="#upward-migration-path">Upward migration path</a></h5>
+<p>Freescale have introduced several new S08 families with the so-called Flexis architecture. The new USB parts &ndash; the <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=S08JM">S08JM family</a> &ndash; are Flexis parts.</p>
+<p>Flexis families have both S08 members, and 32-bit ColdFire members, which are pin-compatible and only a bit more expensive than their 8-bit cousins, making it easy (assuming your code is not in assembler!) to upgrade to a fast 32-bit core. The peripherals are exactly the same 8-bit peripherals in the S08 parts, so all that code &ndash; again, assuming it&rsquo;s in a high-level language &ndash; will port over trivially.</p>
+<p>Or so the story goes. It&rsquo;s a nice idea, and if you&rsquo;re not interested in ever using the 8-bit version, it&rsquo;s a way to get quite cheap 32-bit parts.</p>
+<p>And since ColdFire is essentially 68k, it&rsquo;s a good target for Forth and C (and everything else) and also nice for nostalgia buffs.</p>
+<h4 id="distractions-of-the-s08"><a href="#distractions-of-the-s08">Distractions of the S08</a></h4>
+<p>Ok, so how about downsides to the HCS08? There are several, and a few are big ones.</p>
+<ul>
+<li>lack of community</li>
+<li>lack of open source support</li>
+<li>lack of cheap, universal, and easy-to-use development hardware</li>
+<li>lack of off-the-shelf &ldquo;target&rdquo; hardware (eg, like Arduinos and clones)</li>
+<li>lack of registers! making Forth a bit tricky</li>
+<li>von Neumann architecture slows execution considerably</li>
+<li>most S08 parts are 3v only (1.8v to 3.6v), though there are a few 5v families (intended mostly for automotive customers)</li>
+</ul>
+<p>I think the hardest for me right now is the lack of development hardware. I have some chips, but I have to do some work to be able to try them out. I&rsquo;m currently busy writing code, but soon I&rsquo;ll want to try it on some real hardware!</p>
+<hr />
+<h3 id="december-17-13:33"><a href="#december-17-13:33">2008 December 17 13:33</a></h3>
+<h4 id="freescale-usb-parts-are-on-their-way"><a href="#freescale-usb-parts-are-on-their-way">Freescale USB parts are on their way</a></h4>
+<p>My samples of the <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=S08JM">S08JM16 and S08JM32</a> parts are on their way. Sadly I don&rsquo;t have a way, when they arrive, of doing anything with them. I lack the breakout boards to make them useful &ndash; they are in LQFP32 and LQFP44 packages &ndash; and I lack a way to talk to and program them. S08 parts use a Background Debug Mode (BDM) &ndash; a single-wire, half-duplex interface that is used both to program the Flash and also to debug live code.</p>
+<p>One annoyance with Freescale is that there isn&rsquo;t a single super-cheap board to talk to BDM via USB. Each subfamily (such as JM) has its own DEMO board (costing $30 to 90), which has a USB to BDM connection, but usually somehow castrated to work only with that subfamily. The one &ldquo;universal&rdquo; BDM board is about $99. I may have to get one. It&rsquo;s the AVR Dragon of the S08 world &ndash; but more expensive!</p>
+<p>I just realised that a fun way to play with this stuff might be the <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=JMBADGE">JMBADGE</a>. These are quite cheap ($30 I think), and have loads of possibility. The JM family is one of the &ldquo;Flexis&rdquo; families, which consist of S08 (8 bit) parts on the low end (8k to 60k Flash), and ColdFire V1 parts on the high end (50MHz CPU, 64k to 256k Flash). I could misuse this to program other parts via BDM. And it looks like a fun gizmo.</p>
+<hr />
+<h3 id="december-13-16:40"><a href="#december-13-16:40">2008 December 13 16:40</a></h3>
+<p>I&rsquo;m currently exploring the idea of using Freescale&rsquo;s <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=S08JM&amp;nodeId=01624684491437">S08JM</a> family of USB microcontrollers &ndash; in part because they are retro &amp; nostalgic (for me &ndash; I wrote my first program for the 6800), and in part because they are true von Neumann machines (one memory space for both code and data), rather than Harvard machines like their AVR and PIC competitors. A true Harvard architecture makes interactive Forths difficult to write, since RAM is always in data space, and Flash is in code space. For interaction I want to be able to execute <em>code</em> out of <em>RAM</em> &ndash; but I can&rsquo;t.</p>
+<p>There are some serious downsides to using these Freescale parts. First, Freescale&rsquo;s toolchain &ndash; the bloated Codewarrior &ndash; while <em>free</em> is not open source, and is Windows-only. Second, there isn&rsquo;t a single piece of <em>cheap</em> hardware &ndash; like the AVR Dragon or PICkit2 &ndash; that can program all of Freescale&rsquo;s HC08 parts. Each family has its own DEMOxxx board, and each one costs $50. There is a nifty thing called the <a href="http://www.freescale.com/webapp/sps/site/prod_summary.jsp?code=USBSPYDER08">USBSPYDER08</a>, but it only works with lowest-end parts &ndash; <em>not</em> with the JM family.</p>
+<p>Wondering about this once again, I did the following Google search: &ldquo;open source hc08 tools&rdquo; and landed on a Freescale forum devoted to the <a href="http://forums.freescale.com/freescale/board?board.id=OSBDM08">OSBDM08</a> &ndash; an &ldquo;open source programming cable&rdquo;. Sadly, it seems to be supported only under Codewarrior. But, rather interestingly, the latest thread is by &ldquo;Brad R&rdquo; who &ldquo;writes Forth compilers&rdquo; and is interested in Linux support for the OSBDM08!</p>
+<p>This is, of course, none other than <a href="http://www.bradrodriguez.com/">Brad Rodriguez</a>, long-time Forth <a href="http://www.bradrodriguez.com/papers/">author and explainer</a>, who created the <a href="http://www.camelforth.com/">CamelForth</a> series of 8-bit Forths.</p>
+<p>Pretty cool.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuFORTH%5d%202008%20journal">Send feedback</a> on this page (last edited 2016 October 03 15:32)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>
