@@ -21,7 +21,7 @@
 
 <div id="content">
 <h3 id="august-08-16:55"><a href="#august-08-16:55">2013 August 08 16:55</a></h3>
-<p>After piecemeal work on it over the last few months, I&rsquo;ve been intensively working for the past week or so on Cortex-M support in <a href="/">muFORTH</a>.</p>
+<p>After piecemeal work on it over the last few months, I&rsquo;ve been intensively working for the past week or so on Cortex-M support in <a href="/">muforth</a>.</p>
 <p>In order to try to understand the <a href="http://www.nimblemachines.com/cmsis-dap/">CMSIS-DAP</a> code &ndash; in particular, how one writes an OpenSDA application &ndash; I ended up adding almost all the &ldquo;everyday&rdquo; ARMv7-M instructions to the disassembler &ndash; ALU ops, memory loads and stores, but none of the floating point or exotic SIMD instructions.</p>
 <p>I finally finished the Cortex-M0 (ie, ARMv6-M) assembler, and just two days ago added basic debug support for the <a href="http://www.nimblemachines.com/stellaris-launchpad/">Stellaris Launchpad</a>, a bright red ten-dollar board with an 80MHz ARM Cortex-M4F processor on it.</p>
 <p>I&rsquo;m working on a native Forth compiler that initially will target the Cortex-M0, but that means it will run fine (just slower than ideal) on Cortex-M3 and -M4 parts. (I can always tweak and improve it later to support the M3 and M4.)</p>
@@ -30,8 +30,8 @@
 <p>All in all, I&rsquo;m pretty happy with my progress. Once the Forth (meta)compiler is done, I can start thinking about adding ARMv7-M instructions to the assembler.</p>
 <hr />
 <h3 id="february-06-11:46"><a href="#february-06-11:46">2013 February 06 11:46</a></h3>
-<p>After a few recent breakthroughs, I&rsquo;m now able to connect to the <a href="http://www.nimblemachines.com/cmsis-dap/">CMSIS-DAP</a> firmware on my <a href="http://www.nimblemachines.com/freescale-freedom-board/">Freescale Freedom board</a> and successfully read and write core registers and memory &ndash; using <a href="/">muFORTH</a>!</p>
-<p>Two days ago, after modifying the OSX USB support in muFORTH (to support USB HIDs), I was able to turn the &ldquo;connect&rdquo; LED on the board on and off. This meant that the connection between muFORTH and the HID firmware was working.</p>
+<p>After a few recent breakthroughs, I&rsquo;m now able to connect to the <a href="http://www.nimblemachines.com/cmsis-dap/">CMSIS-DAP</a> firmware on my <a href="http://www.nimblemachines.com/freescale-freedom-board/">Freescale Freedom board</a> and successfully read and write core registers and memory &ndash; using <a href="/">muforth</a>!</p>
+<p>Two days ago, after modifying the OSX USB support in muforth (to support USB HIDs), I was able to turn the &ldquo;connect&rdquo; LED on the board on and off. This meant that the connection between muforth and the HID firmware was working.</p>
 <p>Then, yesterday afternoon I successfully read the IDCODE from the on-chip SW-DP. This required getting the connection sequence right &ndash; sending a binary string to the SW-DP. ARM&rsquo;s documentation &ndash; the <a href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0031a/">ARM Debug Interface v5 spec</a> and the <a href="http://infocenter.arm.com/help/topic/com.arm.doc.prdc008772b/">ADI v5.1 supplement</a> &ndash; disagreed on what this sequence should be. I settled on sending 56 ones followed by 8 zeros, and this seemed to work.</p>
 <p>My next hurdle was to try to read the chip&rsquo;s memory. But any access to AP (access port) registers failed, returning a FAULT. It turns out that it is necessary to first turn on the CSYSPWRUPREQ and CSYSDBGREQ bits in the DP.CTRLSTAT register... Once I did this, the chip was mine!</p>
 <p>Very cool.</p>
