@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="2017, journal, blog" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/2017/" />
+<title>2017 journal &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>2017 journal</h1>
+<hr />
+</div>
+
+<div id="content">
+<h3 id="february-20-12:51"><a href="#february-20-12:51">2017 February 20 12:51</a></h3>
+<p>Welcome to 2017!</p>
+<p>I won&rsquo;t say &ldquo;happy 2017&rdquo; because we now live in a strange time of hacked elections and dire futures. With luck the year will improve as it goes along &ndash; but events continue to suggest otherwise. I&rsquo;m going to try to stay busy working on muforth, regardless of the fraught political situation.</p>
+<h4 id="msp430-updates"><a href="#msp430-updates">MSP430 updates</a></h4>
+<p>I&rsquo;ve been working steadily on tweaks and fixes to the MSP430 target compiler. It is complete enough now to target compile Forth code, and do pretty featureful remote (tethered) execution on the target. There are a few things missing from the MSP430 Forth kernel &ndash; multiply and divide for example &ndash; so there is work to be done there.</p>
+<p>And there is little to no documentation &ndash; other than the Git commit log (where I often wax prolix) &ndash; so getting started can be a challenge. Maybe I need a forum? But perhaps I should wait until there are more than two users... ;-)</p>
+<h4 id="risc-v-arrives-in-silicon"><a href="#risc-v-arrives-in-silicon">RISC-V arrives in silicon!</a></h4>
+<p>If you haven&rsquo;t been following the story, <a href="http://riscv.org/">RISC-V</a> (say &ldquo;risk five&rdquo;), a new computer architecture developed at UC Berkeley, aims to turn the world of computer architecture &ndash; and hopefully computing &ndash; on its head.</p>
+<p>Originally developed for teaching and research, RISC-V is now taking on the world of commercial silicon. The founders of the project &ndash; Krste Asanovic, Yunsup Lee, and Andrew Waterman &ndash; have spun off a company &ndash; SiFive &ndash; that aims to make developing <strong>custom</strong> RISC-V silicon easy and (relatively) inexpensive. (One neat thing about the architecture is its built-in support for instruction set extensions and custom co-processors.) In order to get the ecosystem growing, SiFive have developed the first silicon &ndash; the FE310 &ndash; and a development board to exercise it &ndash; HiFive 1. Before now it was possible to run RISC-V only in simulation (slow) or on an FGPA (somewhat faster). Now we can get an idea of what is possible in real silicon: the HiFive 1 board sports a 32-bit RISC-V chip running at 320 MHz! (This is a 180nm design. They have another design in the pipeline with a more sophisticated core and targeting a much smaller process that will compete with ARM-based application processors.)</p>
+<p>The HiFive 1 is available from Crowd Supply. Go and grab one! or five! I&rsquo;m going to get one, and I plan to get some kind of meta-compiled Forth running on it &ndash; with the help of muforth, of course. ;-) So I should be, in short order, committing an assembler and prototype meta-compiler for RISC-V!</p>
+<p>And props to Crowd Supply for their <a href="https://www.crowdsupply.com/about#user-rights">Proclamation of User Rights</a>, which specifies that Creators can not trample on the rights of Users to explore, change, combine, criticize, and otherwise truly <strong>own</strong> the product, and further requires Creators to take care with respect to Users&rsquo; privacy and security.</p>
+<p>Digital products are <strong>hugely</strong> problematic, <a href="https://www.eff.org/issues/right-to-repair">thanks to the DMCA</a>. Given the current state of law here in the USA, you don&rsquo;t truly own any product that you purchase (not license, but <strong>purchase</strong>) that contains software (or firmware). That software is the property of the manufacturer, and any efforts on your part to understand, modify, or fix it can mean breaking the law! Talk about a chilling effect!!</p>
+<p>Forcing Creators (who use the Crowd Supply platform) to guarantee the freedom of Users to truly own the products they purchase is a <strong>huge</strong> win for Users. Bravo.</p>
+<p>The <a href="https://www.eff.org/">Electronic Frontier Foundation (EFF)</a> is also <a href="https://www.eff.org/issues/right-to-repair">working hard on this issue</a>.</p>
+<h4 id="web-site-update"><a href="#web-site-update">Web site update</a></h4>
+<p>This site started out as a clone of <a href="/-/www.nimblemachines.com">www.nimblemachines.com</a> and inherited all of its problems &ndash; chiefly, the lack of readability. Try as I might to choose attractive and interesting fonts, the sites remained difficult to read on-screen.</p>
+<p>I recently spent several hours digging through <a href="https://fonts.google.com/">Google Fonts</a> &ndash; and what a load of dreck to search through! &ndash; and tried several combinations of fonts. I almost gave up in despair. I kept finding fonts I liked, but somehow on screen every combination I tried looked terrible.</p>
+<p>The chief obstacle was finding a readable <em>body font</em>. I used the <a href="https://www.theguardian.com/">Guardian newspaper</a> as my model. A big part of the personality of the Guardian is the custom typeface, which is also supremely readable. I wanted to find something similar. <a href="https://fonts.google.com/specimen/Merriweather">Merriweather</a> seemed like a possibility, but it looked terrible when I tried using it. The available weights were either too light or dark, and it didn&rsquo;t resonate with any of the sans-serif fonts I wanted to use for headings.</p>
+<p>I finally settled on a trio of fonts that seem to work well together. The body font is <a href="https://fonts.google.com/specimen/Droid+Serif">Droid Serif</a>; the title and heading font is <a href="https://fonts.google.com/specimen/Fira+Sans">Fira Sans</a> (commissioned by Mozilla for Firefox OS); and the monospace font used for code and Forth word names is <a href="https://fonts.google.com/specimen/Fira+Mono">Fira Mono</a> (also from Firefox OS).</p>
+<p>I&rsquo;m going to leave the fonts alone, for now, though I may still tweak the (mostly non-existent) color scheme.</p>
+<p>This minor &ldquo;redesign&rdquo; may show up on <a href="/-/www.nimblemachines.com">www.nimblemachines.com</a> as well... ;-)</p>
+<hr />
+<p>Read the <a href="/2016/">2016 journal</a>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%202017%20journal">Send feedback</a> on this page (last edited 2017 February 20 12:51)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>
