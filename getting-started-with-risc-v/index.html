@@ -56,12 +56,57 @@
   0800 dis
 </pre>
 <p>and keep pressing &lt;RET> to see further lines. Compare what you see here to what is documented in the <a href="https://dev.sifive.com/documentation/risc-v-external-debug-support-0-11/">debug spec version 0.11</a> <a href="https://static.dev.sifive.com/riscv-debug-spec-0.11nov12.pdf">(direct link)</a>.</p>
-<p>Finally, to try actually executing some code, try this:</p>
+<p>To try actually executing some code, try this:</p>
 <pre>
   10305 2040 +
 </pre>
 <p>This pushes two hex values onto the stack, copies this stack over to the target, executes the word <code class="forth">+</code> on the target, which adds them and pushes their sum, and then copies that back to the target. You should see the result in the stack dump.</p>
-<p>There is a lot more to try! But that is a beginning.</p>
+<p>To list the words in the target kernel, try this:</p>
+<pre>
+  target words
+</pre>
+<p>Something more interesting: Let&rsquo;s write a word to read the value of one of the chip&rsquo;s CSRs. This one &ndash; <code>misa</code> &ndash; tells us which base ISA &ndash; RV32 or RV64 &ndash; and which extensions the chip supports.</p>
+<pre>
+  code read-misa   misa w csrr   wpush j  ;c
+  read-misa
+</pre>
+<p>The first line <em>defines</em> <code>read-misa</code> as a &ldquo;code&rdquo; word. This means that its definition is entirely in RISC-V assembler. It consists of just two instructions: one to read the CSR into the w register (an alias for ABI register t0), and one to jump to a routine that pushes w onto the stack and then executes NEXT. (On an ITC Forth all code words have to end by executing NEXT, directly or indirectly.)</p>
+<p>The second lines executes our new word, and the result should show up on the stack. By reading the privileged ISA spec (see <a href="/risc-v-resources/">RISC-V resources</a>) we can peel this apart. But first, let&rsquo;s print its value in binary to make it easier to see:</p>
+<pre>
+  binary u. hex
+</pre>
+<p>This switches the input and output radix to binary, prints as an unsigned number the top of the stack (the contents of <code>misa</code>), then switches back to hex.</p>
+<p>Unfortunately, <code class="forth">u.</code> doesn&rsquo;t print leading zeros, so it&rsquo;s hard to tell that the top two bits &ndash; which define the base ISA &ndash; are <code>01</code> &ndash; meaning RV32. The low order 26 bits each correspond to an ISA extension; the bit is set when that extension is present. I read the result as showing that IMAC are all present &ndash; exactly what we would expect from the FE310.</p>
+<p>Next, let&rsquo;s try a simple &ldquo;colon&rdquo; word. A colon word is any word defined by <code class="forth">:</code> whose body consists of other Forth words. Most Forth code is colon words rather than code words.</p>
+<pre>
+  : bic   ( value mask - result)   invert and ;
+</pre>
+<p><code class="forth">bic</code> is the logical &ldquo;bit clear&rdquo; operation. It takes two parameters &ndash; shown in the &ldquo;stack comment&rdquo; (in parentheses) on the left of the dash &ndash; and produces one result &ndash; shown to the right of the dash. The first word, <code class="forth">invert</code>, does a ones complement of the mask; this is then <code>and</code>ed with the value. Any one bits in the mask clear the corresponding bit in the value. As usual, we see the result on the stack dump (which is always in hex, regardless of the setting of the input/output radix &ndash; an odd quirk of muforth).</p>
+<p>Colon words always end with a <code class="forth">;</code>. When execution reaches this point, the word returns to its caller.</p>
+<p>Let&rsquo;s try it.</p>
+<pre>
+  c0defeed ffff0000 bic
+</pre>
+<p>Hopefully the resulting value makes sense.</p>
+<p>A couple of notes about numbers in muforth. Any number can be prefixed by a radix operator, which changes the radix <em>for that number only</em>. The operators, and their resulting radices, are:</p>
+<pre>
+  %  binary
+  '  octal
+  "  hexadecimal
+  #  decimal
+</pre>
+<p>These can be handy if you are writing an assembler where most values are in octal but need to switch to another radix to enter a single value.</p>
+<p>Following the (optional) radix operator can be an optional sign operator: the usual "-" character.</p>
+<p>Another thing: numbers are generally printed with separators. This makes them much easier to parse. They can also be <em>input</em> with separators. Any of the following characters is a valid separator:</p>
+<pre>
+  . , : / _ -
+</pre>
+<p>Our stack has now accumulated some junk. You can get rid of it by typing</p>
+<pre>
+  .
+</pre>
+<p>over and over. Each execution of <code class="forth">.</code> prints &ndash; this time as a <em>signed</em> value &ndash; the top of the stack, thus removing one value. If there is a ton of junk on the stack, the word <code class="forth">sp-reset</code> clears the stack in one go.</p>
+<p>I hope this whets your appetite for more! There is a lot more coming. See <a href="/risc-v-support/">RISC-V support</a> to see the current state of things.</p>
 <h2 id="risc-v-and-sifive-documentation"><a href="#risc-v-and-sifive-documentation">RISC-V and SiFive documentation</a></h2>
 <p>I&rsquo;ve compiled a page with lots of <a href="/risc-v-resources/">RISC-V resources</a>.</p>
 
@@ -69,7 +114,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 06 15:09)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 07 14:36)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-started-with-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
