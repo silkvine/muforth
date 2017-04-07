@@ -20,6 +20,22 @@
 </div>
 
 <div id="content">
+<h3 id="april-06-14:43"><a href="#april-06-14:43">2017 April 06 14:43</a></h3>
+<h4 id="big-news-today"><a href="#big-news-today">Big news today!</a></h4>
+<p>Two things:</p>
+<ul>
+<li>I just pushed the <a href="https://github.com/nimblemachines/muforth/commit/badd131afd1ec0078d129c5aad3c5ae96a0e81f8">2000th commit</a> to the <a href="https://github.com/nimblemachines/muforth">muforth GitHub repository</a>!</li>
+<li>That commit includes support for remotely executing Forth code on a <a href="https://www.crowdsupply.com/sifive/hifive1">HiFive1</a>, using <a href="/getting-openocd-for-risc-v/">SiFive&rsquo;s <code>openocd</code> port</a> as a debug interface.</li>
+</ul>
+<p>What this <em>really</em> means is that muforth can now do all of the following:</p>
+<ul>
+<li>assemble and disassemble RISC-V code (RV32IM only; currently missing the A and C extensions);</li>
+<li>compile assembler and Forth source code into a binary image;</li>
+<li>transfer that image to the target (a HiFive1); and</li>
+<li>interactively explore memory, and compose and execute code.</li>
+</ul>
+<p>See the full instructions for <a href="/getting-started-with-risc-v/">getting started with RISC-V</a>. I&rsquo;ll also keep up-to-date a page with the status of <a href="/risc-v-support/">RISC-V support</a> in muforth.</p>
+<hr />
 <h3 id="february-20-12:51"><a href="#february-20-12:51">2017 February 20 12:51</a></h3>
 <h4 id="welcome-to-2017"><a href="#welcome-to-2017">Welcome to 2017!</a></h4>
 <p>I won&rsquo;t say &ldquo;happy 2017&rdquo; because we now live in a strange time of hacked elections and dire futures. With luck the year will improve as it goes along &ndash; but events continue to suggest otherwise. I&rsquo;m going to try to stay busy working on muforth, regardless of the fraught political situation.</p>
@@ -28,9 +44,15 @@
 <p>And there is little to no documentation &ndash; other than the Git commit log (where I often wax prolix) &ndash; so getting started can be a challenge. Maybe I need a forum? But perhaps I should wait until there are more than two users... ;-)</p>
 <h4 id="risc-v-arrives-in-silicon"><a href="#risc-v-arrives-in-silicon">RISC-V arrives in silicon!</a></h4>
 <p>If you haven&rsquo;t been following the story, <a href="http://riscv.org/">RISC-V</a> (say &ldquo;risk five&rdquo;), a new computer architecture developed at UC Berkeley, aims to turn the world of computer architecture &ndash; and hopefully computing &ndash; on its head.</p>
-<p>Originally developed for teaching and research, RISC-V is now taking on the world of commercial silicon. The founders of the project &ndash; Krste Asanovic, Yunsup Lee, and Andrew Waterman &ndash; have spun off a company &ndash; <a href="https://www.sifive.com/">SiFive</a> &ndash; that aims to make developing <em>custom</em> RISC-V silicon easy and (relatively) inexpensive. (One neat thing about the architecture is its built-in support for instruction set extensions and custom co-processors.) In order to get the ecosystem growing, SiFive have developed the first silicon &ndash; the <a href="https://dev.sifive.com/hifive1/freedom-e310-g000-manual/">FE310</a> &ndash; and a development board to exercise it &ndash; <a href="https://www.crowdsupply.com/sifive/hifive1">HiFive 1</a>.</p>
-<p>Before now it was possible to run RISC-V only in simulation (slow) or on an FGPA (somewhat faster). Now we can get an idea of what is possible in real silicon: the HiFive 1 board sports a 32-bit RISC-V chip running at 320 MHz! (This is a 180nm design. They have another design in the pipeline with a more sophisticated core and targeting a much smaller process that will compete with ARM-based application processors.)</p>
-<p>The HiFive 1 is <a href="https://www.crowdsupply.com/sifive/hifive1">available from Crowd Supply</a>. Go grab one! Or five! I&rsquo;m going to get one, and I plan to get some kind of meta-compiled Forth running on it &ndash; with the help of muforth, of course. ;-) So I should be, in short order, committing an assembler and prototype meta-compiler for RISC-V!</p>
+<p>Originally developed for teaching and research, RISC-V is now taking on the world of commercial silicon. The founders of the project &ndash; Krste Asanovi&cacute;, Yunsup Lee, and Andrew Waterman &ndash; have spun off a company &ndash; <a href="https://www.sifive.com/">SiFive</a> &ndash; that aims to make developing <em>custom</em> RISC-V silicon easy and (relatively) inexpensive. (One neat thing about the architecture is its built-in support for instruction set extensions and custom co-processors.)</p>
+<p>This talk by Krste Asanovi&cacute; is a great introduction to RISC-V:</p>
+<div class="youtube-container">
+  <iframe width="640" height="360" src="https://www.youtube-nocookie.com/embed/QTYiH1Y5UV0" frameborder="0" allowfullscreen="1"></iframe>
+</div>
+<p>In order to get the ecosystem growing, SiFive have developed the first silicon &ndash; the <a href="https://dev.sifive.com/hifive1/freedom-e310-g000-manual/">FE310</a> &ndash; and a development board to exercise it &ndash; <a href="https://www.crowdsupply.com/sifive/hifive1">HiFive1</a>.</p>
+<p><img src="https://www.crowdsupply.com/img/a3ea/hifive1-board_jpg_project-body.jpg" alt="https://www.crowdsupply.com/img/a3ea/hifive1-board_jpg_project-body.jpg" title="https://www.crowdsupply.com/img/a3ea/hifive1-board_jpg_project-body.jpg" /></p>
+<p>Previously it was possible to run RISC-V only in simulation (slow) or on an FGPA (somewhat faster). Now we can get an idea of what is possible in real silicon: the HiFive1 board sports a 32-bit RISC-V chip running at 320 MHz! (This is a 180nm design. They have another design in the pipeline with a more sophisticated core and targeting a much smaller process that will compete with ARM-based application processors.)</p>
+<p>The HiFive1 is <a href="https://www.crowdsupply.com/sifive/hifive1">available from Crowd Supply</a>. Go grab one! Or five! I&rsquo;m going to get one, and I plan to get some kind of meta-compiled Forth running on it &ndash; with the help of muforth, of course. ;-) So I should be, in short order, committing an assembler and prototype meta-compiler for RISC-V!</p>
 <p>And props to Crowd Supply for their <a href="https://www.crowdsupply.com/about#user-rights">Proclamation of User Rights</a>, which specifies that Creators can not trample on the rights of Users to explore, change, combine, criticize, and otherwise truly <em>own</em> the product, and further requires Creators to take care with respect to Users&rsquo; privacy and security.</p>
 <p>Digital products are <em>hugely</em> problematic, <a href="https://www.eff.org/issues/right-to-repair">thanks to the DMCA</a>. Given the current state of law here in the USA, you don&rsquo;t truly own any product that you purchase (not license, but <em>purchase</em>) that contains software (or firmware). That software is the property of the manufacturer, and any efforts on your part to understand, modify, or fix it can mean breaking the law! Talk about a chilling effect!!</p>
 <p>Forcing Creators (who use the Crowd Supply platform) to guarantee the freedom of Users to truly own the products they purchase is a <em>huge</em> win for Users. Bravo.</p>
@@ -50,7 +72,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%202017%20journal">Send feedback</a> on this page (last edited 2017 February 22 15:44)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%202017%20journal">Send feedback</a> on this page (last edited 2017 April 06 14:43)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
 </div>
 

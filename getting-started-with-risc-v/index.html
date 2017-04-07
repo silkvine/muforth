@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="riscv, risc-v, muforth, forth, support, openocd, hifive1, sifive, getting started" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/getting-started-with-risc-v/" />
+<title>Getting started with RISC-V &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>Getting started with RISC-V</h1>
+<hr />
+</div>
+
+<div id="content">
+<h2 id="introduction"><a href="#introduction">Introduction</a></h2>
+<p>If you&rsquo;re here, it&rsquo;s because you want to try using <a href="/">muforth</a> to explore the world of RISC-V.</p>
+<p>Currently this means that you have a <a href="https://www.crowdsupply.com/sifive/hifive1">HiFive1 board</a>; it is, at the moment, the only RISC-V hardware that muforth supports.</p>
+<p>After getting a HiFive1, the next hurdle you have to jump is <a href="/getting-openocd-for-risc-v/">getting a copy of SiFive&rsquo;s port of <code>openocd</code></a>. (Read that page and then come back here.)</p>
+<p>You do <em>not</em> need a GCC toolchain! Yay! Jump up and down and shout with glee! <code>openocd</code> is the <em>only</em> external tool that muforth needs in order to run code on a HiFive1.</p>
+<h2 id="starting-out"><a href="#starting-out">Starting out</a></h2>
+<p>If you&rsquo;ve never used muforth before, <a href="https://github.com/nimblemachines/muforth">get a copy</a>. <a href="https://github.com/nimblemachines/muforth/blob/master/BUILDING">BUILDING</a> has the very simple instructions for building muforth.</p>
+<p>Once it is built, cd to <code>muforth/mu/</code>. You should <em>always</em> be in this directory when running muforth code.</p>
+<p>Edit the file <code>target/RISC-V/start-openocd.sh</code> and change the <code>openocd</code> variable so it references <em>your</em> local copy of the SiFive <code>openocd</code>.</p>
+<p>If you are on a Mac and running Mavericks or later, unload the Apple FTDI driver; otherwise it will interfere with JTAG:</p>
+<pre>
+  sudo kextunload /System/Library/Extensions/AppleUSBFTDI.kext/
+</pre>
+<p>Plug your HiFive1 into a USB port. Open a second terminal window, leaving the first one sitting in <code>muforth/mu</code>. cd to <code>muforth/mu</code> in this window as well. Then type the following command to start up <code>openocd</code>:</p>
+<pre>
+  target/RISC-V/start-openocd.sh
+</pre>
+<p>Back in the first <code>muforth/mu</code> window type this:</p>
+<pre>
+  ./muforth -f target/RISC-V/build.mu4
+</pre>
+<p>This will load the RISC-V meta-compiler and the RISC-V Forth kernel (which currently loads into RAM). To connect to the board via JTAG, type</p>
+<pre>
+  jtag
+</pre>
+<p>You should see a dump of four registers, all zero except for SP. You are now connected to the target board! To see some of the kernel code that was loaded into RAM, try this:</p>
+<pre>
+  @ram dis
+</pre>
+<p>This will start disassembling the beginning of the Forth kernel. All memory dumping and disassembly in muforth is <em>interactive</em>; pressing &lt;RET> or n will advance; pressing &lt;BS> or p will back up; q will quit, leaving the last-viewed address on the stack.</p>
+<p>The word <code class="forth">@ram</code> is a constant; executing it pushes the address of the start of RAM (&ldquo;at-ram&rdquo;).</p>
+<p>You can also look at built-in features. The Debug ROM is interesting. To see it type</p>
+<pre>
+  0800 dis
+</pre>
+<p>and keep pressing &lt;RET> to see further lines. Compare what you see here to what is documented in the <a href="https://dev.sifive.com/documentation/risc-v-external-debug-support-0-11/">debug spec version 0.11</a> <a href="https://static.dev.sifive.com/riscv-debug-spec-0.11nov12.pdf">(direct link)</a>.</p>
+<p>Finally, to try actually executing some code, try this:</p>
+<pre>
+  10305 2040 +
+</pre>
+<p>This pushes two hex values onto the stack, copies this stack over to the target, executes the word <code class="forth">+</code> on the target, which adds them and pushes their sum, and then copies that back to the target. You should see the result in the stack dump.</p>
+<p>There is a lot more to try! But that is a beginning.</p>
+<h2 id="risc-v-and-sifive-documentation"><a href="#risc-v-and-sifive-documentation">RISC-V and SiFive documentation</a></h2>
+<p>I&rsquo;ve compiled a page with lots of <a href="/risc-v-resources/">RISC-V resources</a>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 06 15:09)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>

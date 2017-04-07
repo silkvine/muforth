@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="description" content="A roadmap of muforth's support of the RISC-V architecture, and, initially, the HiFive 1 development board." />
+<meta name="keywords" content="risc, risc-v, riscv, hifive 1, ISA, instruction set architecture, muforth, forth, support, toolchain" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/risc-v-support/" />
+<title>RISC-V support &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>RISC-V support</h1>
+<hr />
+</div>
+
+<div id="content">
+<h2 id="what-is-risc-v-anyway"><a href="#what-is-risc-v-anyway">What is RISC-V, anyway?</a></h2>
+<p><a href="http://riscv.org/">RISC-V</a> (say &ldquo;risk five&rdquo;), a new computer architecture developed at UC Berkeley, aims to turn the world of computer architecture &ndash; and hopefully computing &ndash; on its head.</p>
+<p>If you&rsquo;re not familiar with RISC-V, you should <a href="/2017/#risc-v-arrives-in-silicon">read my announcement of SiFive&rsquo;s first RISC-V silicon</a>.</p>
+<h2 id="risc-v-support-in-muforth"><a href="#risc-v-support-in-muforth">RISC-V support in muforth</a></h2>
+<p>I think RISC-V is amazing, and I want to see it succeed. To help in my small way &ndash; and to have some fun in the process! &ndash; I want <a href="/">muforth</a> to support RISC-V.</p>
+<h4 id="what-does-this-mean"><a href="#what-does-this-mean">What does this mean?</a></h4>
+<p>You could probably download and build the (rather big!) <a href="https://riscv.org/software-tools/">RISC-V toolchain</a> and use it to build a copy of muforth for RISC-V. But since part of the &ldquo;mission&rdquo; of muforth is to do an <em>end run</em> around existing unwieldly toolchains, I think a more interesting approach is to use muforth as it was intended: as a <em>cross-compiler</em>.</p>
+<h4 id="what-is-involved"><a href="#what-is-involved">What is involved?</a></h4>
+<p>As with any architecture, the steps to supporting RISC-V are something like this:</p>
+<ul>
+<li>write an assembler and disassembler</li>
+<li>write code to talk to the on-board debug</li>
+<li>write, or modify an existing, meta-compiler</li>
+</ul>
+<p>With these three pieces it&rsquo;s possible to:</p>
+<ul>
+<li>explore the chip&rsquo;s memory, both by dumping hex contents and by disassembling them;</li>
+<li>write so-called &ldquo;code&rdquo; words: words written in RISC-V assembler</li>
+<li>write so-called &ldquo;colon&rdquo; words: high-level Forth words that are translated by the meta-compiler into some kind of executable form;</li>
+<li>do all these things <em>interactively</em> while connected to a debug target.</li>
+</ul>
+<h4 id="status"><a href="#status">Status</a></h4>
+<p>As of <a href="https://github.com/nimblemachines/muforth/commit/badd131afd1ec0078d129c5aad3c5ae96a0e81f8">muforth commit badd131afd1e</a> it&rsquo;s possible to do all these things! (See the <a href="/getting-started-with-risc-v/">getting started with RISC-V</a> page for details.)</p>
+<p>There are pieces missing, for sure. The meta-compiler is incomplete &ndash; mostly it lacks control structure words like if/then/else and the looping words for/next and do/loop. The kernel is <em>woefully</em> incomplete, currently containing just the very basic words: arithmetic, logical, and a few stack operations.</p>
+<p>I decided, after long perseveration, to try doing an indirect-threaded code (ITC) Forth, even though ITC is not a great match for RISC architectures. On the plus side, ITC is very simple to implement. I was able in less than a day to tweak the MSP430 meta-compiler and kernel into being a RISC-V meta-compiler and kernel. I&rsquo;d love to continue exploring implementations, but for the moment I&rsquo;m going to stick with, and flesh out, the ITC implementation.</p>
+<h4 id="whats-missing"><a href="#whats-missing">What&rsquo;s missing?</a></h4>
+<p>I need to add documentation, support for the on-chip hardware (starting with equates describing the memory location of each chip register), a more complete kernel, and, ideally, multi-tasking capability. None of this is that hard; it just takes time.</p>
+<h4 id="quirks-foibles-and-difficulties"><a href="#quirks-foibles-and-difficulties">Quirks, foibles, and difficulties</a></h4>
+<p>The only way to write to the on-board SPI flash on the SiFive board is via JTAG (via the on-board FTDI chip). Initially this may have to be done using RISC-V&rsquo;s modified version of OpenOCD; eventually I&rsquo;d like to &ndash; somehow &ndash; do this directly from muforth.</p>
+<p>What this means is that <em>at the moment</em> &ndash; and for the forseeable future &ndash; the only way to talk to the board is via a custom fork of <code>openocd</code>. This isn&rsquo;t as terrible as it seems; there is an easy way to <a href="/getting-openocd-for-risc-v/">get the RISC-V-capable <code>openocd</code></a>.</p>
+<h2 id="risc-v-and-sifive-documentation"><a href="#risc-v-and-sifive-documentation">RISC-V and SiFive documentation</a></h2>
+<p>I&rsquo;ve compiled a page with lots of <a href="/risc-v-resources/">RISC-V resources</a>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20RISC-V%20support">Send feedback</a> on this page (last edited 2017 March 06 19:25)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a>
+</div>
+
+</body>
+</html>
