@@ -20,6 +20,21 @@
 </div>
 
 <div id="content">
+<h3 id="now"><a href="#now">[now]</a></h3>
+<h4 id="why-am-i-so-excited-about-risc-v"><a href="#why-am-i-so-excited-about-risc-v">Why am I so excited about RISC-V?</a></h4>
+<p>I just posted a response on GitHub to the question &ldquo;Is RISC-V the bee&rsquo;s knees?&rdquo; and thought I should re-post it here.</p>
+<p>I kinda feel the way I felt back in the 80s and early 90s when ARM was the underdog. They had a new, fresh design, a small-is-beautiful approach, and a sense of openness. (I have an ARM Assembler Cookbook that has some amazing ideas and code in it &ndash; circa 1993 or so.) Since then ARM have become much more closed and proprietary. Their clean, tiny core has grown an instruction set that rivals x86 in its complexity. And it&rsquo;s only getting worse with their move to 64 bits.</p>
+<p><a href="https://riscv.org/">RISC-V</a> appeals to me in the same way that ARM did in those early days, and that Lua always has. I&rsquo;m <a href="http://www.nimblemachines.com/lua-programming-language/">on record celebrating Lua&rsquo;s parsimony</a> in an era of profligacy. RISC-V has the same sense of parsimony.</p>
+<p>Having written a bunch of assemblers and disassemblers (and simple compilers too), I care about instruction sets. RISC-V really hits a sweet spot. The design is impeccable; and the encoding rather clever. I especially appreciate that the Compressed instructions are disjoint from the &ldquo;standard&rdquo; set &ndash; not some tacked-on after-thought that requires a new mode (Thumb, anyone?) and lots of annoyance and complexity for the compiler and OS people.</p>
+<p>I also think it has <em>legs</em>. I really hope that SiFive make a big splash, and I&rsquo;m trying to help out in my small way by making tools that might be useful to people on this new cutting edge &ndash; people who are exploring the architecture and bringing up new systems.</p>
+<p>I knew ARM was going to succeed. I should have bought their stock! But success has ruined them, in a way. Yes, their CoreSight Debug stuff is cool and well-designed, but Thumb2 is so hairy that I never finished my disassembler, and never even <em>started</em> the assembler. I didn&rsquo;t mean to, but I kind of gave up on Cortex-M.</p>
+<p>And I totally buy the RISC-V propaganda about having a single instruction set for an entire SoC. Right now there might two or more for the core, another for the DSP, another for an &ldquo;embedded controller&rdquo;, etc. You have to have knowledge of each, toolchains for each, etc. It&rsquo;s a nightmare.</p>
+<p>Having &ldquo;one instruction set&rdquo; to rule them all is a great idea. And one with built-in support for co-processors and instruction-set extensions! (Well, ARM had that too. The co-processor bit at least.)</p>
+<p>Having a truly <em>free</em> instruction set that can be meaningfully used for both teaching and research is, frankly, amazing. And it&rsquo;s a nice one, too! An inspiration, even!</p>
+<p>So, yes &ndash; I think RISC-V <em>is</em> the bee&rsquo;s knees. ;-)</p>
+<p>As a side note: I was pretty excited about the MSP430 before I got excited about RISC-V. The MSP430 was probably the easiest instruction set to write an assembler and disassembler for, and because it&rsquo;s almost a PDP-11 &ndash; with the perfect mix of post-increment instructions and PC-as-a-general-register &ndash; writing an ITC Forth was not only totally trivial, but rivals native code in speed. (ITC NEXT is on par with doing a call and return, if not faster.)</p>
+<p>Oddly, even though MSP430 is totally CISC, I was able to take the MSP430 kernel and meta-compiler and rewrite them for RISC-V in no time &ndash; a day or two maybe.</p>
+<hr />
 <h3 id="april-06-14:43"><a href="#april-06-14:43">2017 April 06 14:43</a></h3>
 <h4 id="big-news-today"><a href="#big-news-today">Big news today!</a></h4>
 <p>Two things:</p>
