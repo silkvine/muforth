@@ -44,13 +44,14 @@
 </ul>
 <h4 id="status"><a href="#status">Status</a></h4>
 <p>As of <a href="https://github.com/nimblemachines/muforth/commit/badd131afd1ec0078d129c5aad3c5ae96a0e81f8">muforth commit badd131afd1e</a> it&rsquo;s possible to do all these things! (See the <a href="/getting-started-with-risc-v/">getting started with RISC-V</a> page for details.)</p>
-<p>There are pieces missing, for sure. The meta-compiler is incomplete &ndash; mostly it lacks control structure words like if/then/else and the looping words for/next and do/loop. The kernel is <em>woefully</em> incomplete, currently containing just the very basic words: arithmetic, logical, and a few stack operations.</p>
+<p>There are pieces missing, for sure. The meta-compiler is incomplete: while it&rsquo;s possible to compile &ldquo;user-mode&rdquo; code, there is no way to write exception handlers. Generally, the current state of remote execution requires <em>working demo code</em> to run on the board after reset, before muforth can connect to it.</p>
+<p>The kernel is also incomplete: it&rsquo;s currently lacking multiplication and division words.</p>
 <p>I decided, after long perseveration, to try doing an indirect-threaded code (ITC) Forth, even though ITC is not a great match for RISC architectures. On the plus side, ITC is very simple to implement. I was able in less than a day to tweak the MSP430 meta-compiler and kernel into being a RISC-V meta-compiler and kernel. I&rsquo;d love to continue exploring implementations, but for the moment I&rsquo;m going to stick with, and flesh out, the ITC implementation.</p>
 <h4 id="whats-missing"><a href="#whats-missing">What&rsquo;s missing?</a></h4>
 <p>I need to add documentation, support for the on-chip hardware (starting with equates describing the memory location of each chip register), a more complete kernel, and, ideally, multi-tasking capability. None of this is that hard; it just takes time.</p>
 <h4 id="quirks-foibles-and-difficulties"><a href="#quirks-foibles-and-difficulties">Quirks, foibles, and difficulties</a></h4>
-<p>The only way to write to the on-board SPI flash on the SiFive board is via JTAG (via the on-board FTDI chip). Initially this may have to be done using RISC-V&rsquo;s modified version of OpenOCD; eventually I&rsquo;d like to &ndash; somehow &ndash; do this directly from muforth.</p>
-<p>What this means is that <em>at the moment</em> &ndash; and for the forseeable future &ndash; the only way to talk to the board is via a custom fork of <code>openocd</code>. This isn&rsquo;t as terrible as it seems; there is an easy way to <a href="/getting-openocd-for-risc-v/">get the RISC-V-capable <code>openocd</code></a>.</p>
+<p>The only way to write to the on-board SPI flash on the SiFive board is via JTAG (via the on-board FTDI chip). Initially this has to be done using SiFive&rsquo;s modified version of openocd; eventually I&rsquo;d like to &ndash; somehow &ndash; do this directly from muforth.</p>
+<p>What this means is that <em>at the moment</em> &ndash; and for the forseeable future &ndash; the only way to talk to the board &ndash; either to program the SPI flash or to write and test Forth code &ndash; is via <code>openocd</code>. This isn&rsquo;t as terrible as it seems; there is an easy way to <a href="/getting-openocd-for-risc-v/">get the RISC-V-capable <code>openocd</code></a>.</p>
 <h2 id="risc-v-and-sifive-documentation"><a href="#risc-v-and-sifive-documentation">RISC-V and SiFive documentation</a></h2>
 <p>I&rsquo;ve compiled a page with lots of <a href="/risc-v-resources/">RISC-V resources</a>.</p>
 
@@ -58,7 +59,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20RISC-V%20support">Send feedback</a> on this page (last edited 2017 March 06 19:25)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20RISC-V%20support">Send feedback</a> on this page (last edited 2017 April 11 16:37)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2frisc-v-support%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>

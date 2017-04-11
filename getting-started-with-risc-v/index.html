@@ -116,7 +116,7 @@
 </pre>
 <p>over and over. Each execution of <code class="forth">.</code> prints as a <em>signed</em> value the top of the stack, thus removing one value. If there is a ton of junk on the stack, the word <code class="forth">sp-reset</code> clears the stack in one go.</p>
 <h4 id="writing-loops"><a href="#writing-loops">Writing loops</a></h4>
-<p>Forth has both <em>definite</em> and <em>indefinite</em> loops. Definite loops are based a count; indefinite loops loop until some condition becomes true. Let&rsquo;s look each in turn.</p>
+<p>Forth has both <em>definite</em> and <em>indefinite</em> loops. Definite loops are based on a count; indefinite loops loop until some condition becomes true. Let&rsquo;s look each in turn.</p>
 <p>There are two kinds of definite loops: for/next and do/loop. We use for/next when we want to iterate a known number of times and don&rsquo;t care about the <em>value</em> of the loop index. (It&rsquo;s hidden from our code, but the loop index counts down to zero from the given starting value.) Let&rsquo;s try two versions of for/next: one that simply does a calculation, and one that has a &ldquo;bug&rdquo; in it, so it stops every time through to let us look around.</p>
 <p>Try this:</p>
 <pre>
@@ -181,7 +181,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 15:31)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 16:33)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-started-with-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
