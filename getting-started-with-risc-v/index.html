@@ -25,9 +25,10 @@
 <p>Currently this means that you have a <a href="https://www.crowdsupply.com/sifive/hifive1">HiFive1 board</a>; it is, at the moment, the only RISC-V hardware that muforth supports.</p>
 <p>After getting a HiFive1, the next hurdle you have to jump is <a href="/getting-openocd-for-risc-v/">getting a copy of SiFive&rsquo;s port of <code>openocd</code></a>. (Read that page and then come back here.)</p>
 <p>You do <em>not</em> need a GCC toolchain! Yay! Jump up and down and shout with glee! <code>openocd</code> is the <em>only</em> external tool that muforth needs in order to run code on a HiFive1.</p>
-<h2 id="starting-out"><a href="#starting-out">Starting out</a></h2>
+<h2 id="getting-muforth"><a href="#getting-muforth">Getting muforth</a></h2>
 <p>If you&rsquo;ve never used muforth before, <a href="https://github.com/nimblemachines/muforth">get a copy</a>. <a href="https://github.com/nimblemachines/muforth/blob/master/BUILDING">BUILDING</a> has the very simple instructions for building muforth.</p>
 <p>Once it is built, cd to <code>muforth/mu/</code>. You should <em>always</em> be in this directory when running muforth code.</p>
+<h2 id="connecting"><a href="#connecting">Connecting</a></h2>
 <p>Edit the file <code>target/RISC-V/start-openocd.sh</code> and change the <code>openocd</code> variable so it references <em>your</em> local copy of the SiFive <code>openocd</code>.</p>
 <p>If you are on a Mac and running Mavericks or later, unload the Apple FTDI driver; otherwise it will interfere with JTAG:</p>
 <pre>
@@ -45,7 +46,10 @@
 <pre>
   jtag
 </pre>
-<p>You should see a dump of four registers, all zero except for SP. You are now connected to the target board! To see some of the kernel code that was loaded into RAM, try this:</p>
+<p>You should see a dump of four registers, all zero except for SP. You are now connected to the target board!</p>
+<h2 id="exploring"><a href="#exploring">Exploring</a></h2>
+<h4 id="disassembling-risc-v-code"><a href="#disassembling-risc-v-code">Disassembling RISC-V code</a></h4>
+<p>To see some of the kernel code that was loaded into RAM, try this:</p>
 <pre>
   @ram dis
 </pre>
@@ -56,6 +60,7 @@
   0800 dis
 </pre>
 <p>and keep pressing &lt;RET> to see further lines. Compare what you see here to what is documented in the <a href="https://dev.sifive.com/documentation/risc-v-external-debug-support-0-11/">debug spec version 0.11</a> <a href="https://static.dev.sifive.com/riscv-debug-spec-0.11nov12.pdf">(direct link)</a>.</p>
+<h4 id="executing-target-forth-words"><a href="#executing-target-forth-words">Executing target Forth words</a></h4>
 <p>To try actually executing some code, try this:</p>
 <pre>
   10305 2040 +
@@ -65,6 +70,7 @@
 <pre>
   target words
 </pre>
+<h4 id="peering-inside-the-fe310"><a href="#peering-inside-the-fe310">Peering inside the FE310</a></h4>
 <p>Something more interesting: Let&rsquo;s write a word to read the value of one of the chip&rsquo;s CSRs. This one &ndash; <code>misa</code> &ndash; tells us which base ISA &ndash; RV32 or RV64 &ndash; and which extensions the chip supports.</p>
 <pre>
   code read-misa   misa w csrr   wpush j  ;c
@@ -77,6 +83,7 @@
 </pre>
 <p>This switches the input and output radix to binary, prints as an unsigned number the top of the stack (the contents of <code>misa</code>), then switches back to hex.</p>
 <p>Unfortunately, <code class="forth">u.</code> doesn&rsquo;t print leading zeros, so it&rsquo;s hard to tell that the top two bits &ndash; which define the base ISA &ndash; are <code>01</code> &ndash; meaning RV32. The low order 26 bits each correspond to an ISA extension; the bit is set when that extension is present. I read the result as showing that IMAC are all present &ndash; exactly what we would expect from the FE310.</p>
+<h4 id="writing-forth-words"><a href="#writing-forth-words">Writing Forth words</a></h4>
 <p>Next, let&rsquo;s try a simple &ldquo;colon&rdquo; word. A colon word is any word defined by <code class="forth">:</code> whose body consists of other Forth words. Most Forth code is colon words rather than code words.</p>
 <pre>
   : bic   ( value mask - result)   invert and ;
@@ -88,6 +95,7 @@
   c0defeed ffff0000 bic
 </pre>
 <p>Hopefully the resulting value makes sense.</p>
+<h4 id="how-numbers-work"><a href="#how-numbers-work">How numbers work</a></h4>
 <p>A couple of notes about numbers in muforth. Any number can be prefixed by a radix operator, which changes the radix <em>for that number only</em>. The operators, and their resulting radices, are:</p>
 <pre>
   %  binary
@@ -101,11 +109,70 @@
 <pre>
   . , : / _ -
 </pre>
+<p>You should also realize that numbers are 64-bit on the host stack (in muforth) but truncated to 32-bits when copied over to the target.</p>
 <p>Our stack has now accumulated some junk. You can get rid of it by typing</p>
 <pre>
   .
 </pre>
 <p>over and over. Each execution of <code class="forth">.</code> prints as a <em>signed</em> value the top of the stack, thus removing one value. If there is a ton of junk on the stack, the word <code class="forth">sp-reset</code> clears the stack in one go.</p>
+<h4 id="writing-loops"><a href="#writing-loops">Writing loops</a></h4>
+<p>Forth has both <em>definite</em> and <em>indefinite</em> loops. Definite loops are based a count; indefinite loops loop until some condition becomes true. Let&rsquo;s look each in turn.</p>
+<p>There are two kinds of definite loops: for/next and do/loop. We use for/next when we want to iterate a known number of times and don&rsquo;t care about the <em>value</em> of the loop index. (It&rsquo;s hidden from our code, but the loop index counts down to zero from the given starting value.) Let&rsquo;s try two versions of for/next: one that simply does a calculation, and one that has a &ldquo;bug&rdquo; in it, so it stops every time through to let us look around.</p>
+<p>Try this:</p>
+<pre>
+  : lshift  ( n #shifts)  for 2* next ;
+  0abcd 4 lshift
+</pre>
+<p>We&rsquo;ve included a stack comment to remind us what&rsquo;s going on here. (We are basically re-implementing <code class="forth">&lt;&lt;</code> in Forth.) Since <code class="forth">2*</code> shifts left by one bit, the loop will shift left by the number of bits specified.</p>
+<p>Now the bugged version:</p>
+<pre>
+  : lshift-bug  ( n #shifts)  for 2* bug next ;
+  0abcd 4 lshift-bug
+</pre>
+<p>When you first execute <code class="forth">lshift-bug</code> you&rsquo;ll see that the IP register has a |*| next to it. This means that execution of your word did not complete. We are somewhere in the body of word (in this case, <code class="forth">lshift-bug</code>) and we can look around. There is not much to see; however, the value on the stack has been shifted left by one bit. Now type</p>
+<pre>
+  cont
+</pre>
+<p>to continue execution. The same thing will happen. IP will be starred, and the value on the stack will have been shifted left again. Keep typing <code>cont</code> until IP is unstarred. Execution has completed and we should see the same result on the stack that we got with <code class="forth">lshift</code>.</p>
+<p>The second kind of definite loop is the <code class="forth">do</code> loop. It consumes two values from the stack &ndash; a limit and an index &ndash; and loops until the index reaches the limit. In the body of the loop the word <code class="forth">i</code> pushes the current loop index onto the stack.</p>
+<p>A do loop always starts with <code class="forth">do</code> but can end with either <code class="forth">loop</code> or <code class="forth">+loop</code>. <code class="forth">loop</code> increments the index by 1; <code class="forth">+loop</code> consumes a stack value and increments the index by that value. Since it will be hard to see what&rsquo;s going on if we let these run free, let&rsquo;s only try the bugged versions.</p>
+<p>Try this:</p>
+<pre>
+  : doit  ( limit index)  do  i bug drop  loop ;
+  5 0 doit
+</pre>
+<p>This should count <em>up</em> &ndash; starting at index, continuing until index reaches limit &ndash; from 0 to 4. <code class="forth">i</code> will push the current index, <code class="forth">bug</code> will stop so we can see it on the stack, and then <code class="forth">drop loop</code> will throw away the current index value, and loop again, or exit.</p>
+<p>As before, keep typing <code>cont</code> until IP is unstarred. Try some other limits and indices and see what happens.</p>
+<p>Now the <code class="forth">+loop</code> version:</p>
+<pre>
+  : doit+  ( limit index)  do  i bug drop  +loop ;
+  -20 -10 -3 doit+
+</pre>
+<p>Does the resulting behaviour make sense?</p>
+<p>So what about <em>indefinite</em> loops? There are two varieties of these as well: one that always executes the loop body at least once (like C&rsquo;s do...while) and one that tests the termination condition at or near the beginning (like C&rsquo;s while). Here they are:</p>
+<pre>
+  begin  &lt;loop body>  &lt;condition> until
+  begin  &lt;condition> while  &lt;loop body>  repeat
+</pre>
+<p>There is also an unending version that we won&rsquo;t be trying out here:</p>
+<pre>
+  begin  &lt;loop body>  again
+</pre>
+<p>which is useful for the main loop of an embedded application.</p>
+<p>I&rsquo;m going to write &ldquo;bugged&rdquo; versions of these. Feel free to try them with or without the bug. Try these definitions:</p>
+<pre>
+  : overflow  ( n - n')  begin  2*  bug  dup 0&lt; until ;
+  4000_0000 overflow
+</pre>
+<p>The word <code class="forth">0&lt;</code> consumes the value on the stack (hence we <code class="forth">dup</code> it first) and pushes -1 (true) if the value is less than 0, and 0 (false) otherwise.</p>
+<p>Don&rsquo;t pass 0 to <code class="forth">overflow</code>. ;-)</p>
+<pre>
+  : till-even  ( n - n')  begin  dup 1 and  bug  0= while  u2/  repeat ;
+  47 till-even
+</pre>
+<p>A bit of explanation. <code class="forth">0=</code> is like <code class="forth">0&lt;</code>: it consumes a value and pushes -1 if it is equal to zero and 0 otherwise. <code class="forth">dup 1 and</code> makes a copy of a value and then tests the low-order bit (which is 1 if the value is odd). <code class="forth">u2/</code> does an <em>unsigned</em> right shift by one bit. (<code class="forth">2/</code> is the <em>signed</em> version.) I&rsquo;ve placed the bug to show <em>both</em> the value being tested <em>and</em> its low-order bit.</p>
+<p>Remember: the stack is showing <em>hex</em> values. If you <em>really</em> want to see what&rsquo;s going on, set the radix to <code class="forth">binary</code>, and use <code class="forth">over u.</code> to copy and print the value on the stack each time through the loop. (<code class="forth">over</code> makes a copy of the second value on the stack, where <code class="forth">dup</code> copies the top value.)</p>
+<h4 id="go-forth-and-conquer"><a href="#go-forth-and-conquer">Go forth and conquer!</a></h4>
 <p>I hope this whets your appetite for more! There is a lot more coming. See <a href="/risc-v-support/">RISC-V support</a> to see the current state of things.</p>
 <h2 id="risc-v-and-sifive-documentation"><a href="#risc-v-and-sifive-documentation">RISC-V and SiFive documentation</a></h2>
 <p>I&rsquo;ve compiled a page with lots of <a href="/risc-v-resources/">RISC-V resources</a>.</p>
@@ -114,7 +181,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 07 14:36)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 15:31)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-started-with-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
