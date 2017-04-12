@@ -162,7 +162,7 @@
 <p>I&rsquo;m going to write &ldquo;bugged&rdquo; versions of these. Feel free to try them with or without the bug. Try these definitions:</p>
 <pre>
   : overflow  ( n - n')  begin  2*  bug  dup 0&lt; until ;
-  4000_0000 overflow
+  800_0000 overflow
 </pre>
 <p>The word <code class="forth">0&lt;</code> consumes the value on the stack (hence we <code class="forth">dup</code> it first) and pushes -1 (true) if the value is less than 0, and 0 (false) otherwise.</p>
 <p>Don&rsquo;t pass 0 to <code class="forth">overflow</code>. ;-)</p>
@@ -181,7 +181,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 17:59)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 21:43)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-started-with-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
