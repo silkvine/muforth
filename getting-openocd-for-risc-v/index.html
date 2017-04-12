@@ -20,8 +20,8 @@
 </div>
 
 <div id="content">
-<p>If you want to use the HiFive1 with <a href="/">muforth</a> you currently have to use the SiFive port of <code>openocd</code>. You could <a href="https://github.com/sifive/openocd">download the source</a> and build it, but there is an easier way!</p>
-<p>Because the HiFive1 is intended to have at least <em>some</em> Arduino compatibility &ndash; it has the right form factor the shields, for instance &ndash; SiFive have made pre-built versions of the GCC toolchain and their RISC-V port of <code>openocd</code> available for consumption by the Arduino IDE.</p>
+<p>If you want to use the HiFive1 with <a href="/">muforth</a> you currently have to use the RISC-V port of <code>openocd</code>. You could <a href="https://github.com/riscv/openocd">download the source</a> and build it, but there is an easier way!</p>
+<p>Because the HiFive1 is intended to have at least <em>some</em> Arduino compatibility &ndash; it has the right form factor the shields, for instance &ndash; SiFive have made pre-built binary versions of the GCC toolchain and the RISC-V port of <code>openocd</code> available for consumption by the Arduino IDE.</p>
 <p>But we can use them too!</p>
 <p>Here is how. First, download the <a href="https://static.dev.sifive.com/bsp/arduino/package_sifive_index.json"><code>package_sifive_index.json</code></a> file that the IDE uses to find the toolchain and debug binaries. Currently the <a href="https://github.com/sifive/freedom-e-sdk">freedom-e-sdk repo</a> shows that we want <code>openocd</code> at commit 9bab0782, so, using <code>less</code> or the editor of your choice, search for that commit string in the JSON file you just downloaded.</p>
 <p>You&rsquo;ll find several choices of <em>binary</em> packages to download: for x86 and x86_64 Linux, and x86_64 Apple Darwin (OSX). Download the one that suits you. I think you can use HTTPS even though the URLs specify HTTP. If you are careful, you probably want to check the SHA256 hash of the downloaded archive against the one in the packages file. If it matches, untar it somewhere.</p>
@@ -30,14 +30,14 @@
 <p>On my Mac, I installed <code>libusb1</code> via Nix and then created symlinks in <code>/usr/local/opt/</code>. (If you already use Homebrew, simply use it to install <code>libusb</code> and you should be good to go.)</p>
 <p>On NixOS, it&rsquo;s possible to use <code>patchelf</code> to rewrite both the ELF interpreter and the RPATH of the <code>openocd</code> executable. There is some discussion of this technique <a href="https://github.com/nimblemachines/muforth/issues/7">here</a>.</p>
 <p>For non-NixOS Linux users, simply installing <code>libusb</code> via your package manager should be sufficient.</p>
-<p>I&rsquo;ve created issues (<a href="https://github.com/sifive/cinco/issues/23">#23</a> and <a href="https://github.com/sifive/cinco/issues/24">#24</a>) for <code>openocd</code>, so hopefully in the future this will be easier.</p>
+<p>I&rsquo;ve created issues (<a href="https://github.com/sifive/cinco/issues/23">#23</a> and <a href="https://github.com/sifive/cinco/issues/24">#24</a>) against the pre-built <code>openocd</code> binaries, so hopefully in the future this will be easier.</p>
 <p>You&rsquo;re done! You&rsquo;ve now got a working copy of <code>openocd</code> that you can use with muforth and RISC-V platforms.</p>
 
 </div>
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20openocd%20for%20RISC-V">Send feedback</a> on this page (last edited 2017 April 11 14:07)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20openocd%20for%20RISC-V">Send feedback</a> on this page (last edited 2017 April 12 14:07)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-openocd-for-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
