@@ -6,7 +6,7 @@
 <head>
 <meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
 <meta name="description" content="muforth is a simple and fast indirect-threaded Forth that is written in C, self-bootstrapping, and BSD-licensed. It is designed to be used as a cross-compiler for microcontrollers but is truly general-purpose. It runs on Linux, OSX, and BSD." />
-<meta name="keywords" content="forth, muforth, meta-compiler, cross-compiler, threaded code, indirect threaded code, ITC, DTC, compiler, bootstrap, bootstrapping, Linux, OSX, FreeBSD, NetBSD, OpenBSD, ARM, ARM7, ARM7TDMI, ARMv6, ARMv7, Cortex-M0, Cortex-M0+, Cortex-M3, Cortex-M4, RISC-V, MSP430, HC08, HCS08, S08, PIC18" />
+<meta name="keywords" content="forth, muforth, meta-compiler, cross-compiler, target-compiler, threaded code, indirect threaded code, ITC, DTC, compiler, bootstrap, bootstrapping, Linux, OSX, FreeBSD, NetBSD, OpenBSD, ARM, ARM7, ARM7TDMI, ARMv6, ARMv7, Cortex-M0, Cortex-M0+, Cortex-M3, Cortex-M4, RISC-V, MSP430, HC08, HCS08, S08, PIC18" />
 <meta name="robots" content="index,follow" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="/-/screen.css" type="text/css" />
@@ -21,17 +21,30 @@
 </div>
 
 <div id="content">
-<h2 id="introduction"><a href="#introduction">Introduction</a></h2>
-<p>I wrote a Forth called muforth, to explore both implementation techniques (a simple native code compiler for the x86, tail recursion), and the idea of building a small kernel that can bootstrap itself by loading Forth code from source.</p>
-<p>I started working on it in 2002; in 2005, after unsuccessfully trying to &ldquo;port&rdquo; the simple compiler to the PowerPC, so a friend with a G4 Mac could try the system, I rewrote the core to be an odd hybrid of C code and indirect-threaded Forth. Now it is (hopefully) completely portable. I know one person who is successfully using it on ARM hardware.</p>
-<p>One of the primary reasons for writing muforth was to replace the very unportable Linux-specific Forth &ndash; dforth &ndash; that I had been using to do target compilation (for embedded control applications). I&rsquo;m <em>very</em> interested in writing target compilers hosted on muforth, and have partial support for <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v5/">ARM7</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v7-m/">ARM Cortex-M</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/AVR/">Atmel AVR</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/MSP430/">TI MSP430</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/HC08/">Freescale HCS08</a>, <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/PIC18/">Microchip PIC18</a>, and <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/RISC-V/">RISC-V</a>. None of these compilers is complete, however.</p>
+<h2 id="what-is-muforth"><a href="#what-is-muforth">What is muforth?</a></h2>
+<p>muforth is a small, simple, fast, indirect-threaded code (ITC) Forth intended for use as a cross-compiler for microcontrollers and other embedded devices. It is written in C and its core is very portable. Because of its Forth nature, it is naturally extensible, scriptable, and customizable.</p>
+<p>It is very well-suited to interactive coding, debugging, and exploration, and is a great tool for bringing up new hardware.</p>
+<p>It has support &ndash; in varying degrees of completeness &ndash; for the following architectures:</p>
+<ul>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v5">ARMv5</a> (originally targeting an ARM AEB-1 board running an ARM7DI processor)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v6-m">ARMv6-m</a> (aka Cortex-M0/M0+)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/ARM/v7-m">ARMv7-m</a> (aka Cortex-M3/M4)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/AVR">AVR</a> (Atmel)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/HC08">HC08 and HCS08</a> (Motorola/Freescale/NXP)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/MSP430">MSP430</a> (TI)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/PIC18">PIC18</a> (Microchip)</li>
+<li><a href="https://github.com/nimblemachines/muforth/tree/master/mu/target/RISC-V">RISC-V</a> (initially targeting the SiFive FE310)</li>
+</ul>
+<h2 id="why-yet-another-forth"><a href="#why-yet-another-forth">Why yet another Forth?</a></h2>
+<p>I initially wrote muforth because I wanted to try out some implementation ideas. Today there is very little that distinguishes muforth from fig-FORTH &ndash; but the differences go rather deep.</p>
+<p>Its implementation is no longer the point. Its sole reason for existing is to be a cross/meta/target-compiler for <em>other</em> Forths, and their implementations are in no way tied to muforth&rsquo;s.</p>
 <h2 id="get-the-source"><a href="#get-the-source">Get the source</a></h2>
 <p>The code is hosted at <a href="http://github.com/nimblemachines/muforth/tree/master/">Github</a>. It&rsquo;s super easy to build; just look at <a href="https://github.com/nimblemachines/muforth/blob/master/BUILDING">BUILDING</a>.</p>
 <p>It&rsquo;s <a href="https://github.com/nimblemachines/muforth/blob/master/LICENSE">BSD licensed</a>, so do what you want with it! I&rsquo;d love to <a href="mailto:%6d%75%66%6f%72%74%68%2b%75%73%65%73%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear about innovative or unusual uses</a> of muforth.</p>
 <h2 id="documentation"><a href="#documentation">Documentation</a></h2>
-<p>The <a href="/readme/">README</a> &ndash; though outdated in some ways &ndash; is a good introduction to why I wrote muforth and what I was trying to achieve. It describes the native-code compiler version of the system. That, and a few other things &ndash; notably create/does, the tokeniser, and the <em>lack</em> of tail-recursion in the threaded version &ndash; have changed since the <a href="/readme/">README</a> was written, but much of it is still true, applicable, and hopefully of interest.</p>
 <p>The code &ndash; both the <a href="https://github.com/nimblemachines/muforth/tree/master/src/">C code that implements the Forth virtual machine</a> and the <a href="https://github.com/nimblemachines/muforth/tree/master/mu/">muforth code that does everything else</a> &ndash; is carefully and in some cases extensively (even obsessively!) commented. Right now your best source of documentation is the code! Luckily for you, there isn&rsquo;t that much, so reading it is actually possible. That&rsquo;s part of the point of muforth; I want it to be a <a href="http://www.nimblemachines.com/convivial-tool/">convivial tool</a>.</p>
 <p>The key to the system is the Forth code that muforth reads when it first starts: <a href="https://github.com/nimblemachines/muforth/blob/master/mu/startup.mu4">startup.mu4</a>. You&rsquo;ll learn a <em>lot</em> by reading this!</p>
+<p>Look in <a href="https://github.com/nimblemachines/muforth/tree/master/mu/target">mu/target/</a> to find a target that interests you. There is generally a mu/target/&lt;target>/build.mu4 that loads the cross-build environment. Use it as an &ldquo;index&rdquo; to find the assembler, disassembler, meta-compiler, kernel, and other key pieces of code.</p>
 <p><strong>NOTE:</strong> The state of muforth&rsquo;s documentation will get much better! Especially if I <a href="mailto:%6d%75%66%6f%72%74%68%2b%64%6f%63%75%6d%65%6e%74%61%74%69%6f%6e%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">hear feedback</a> about how terrible it is. ;-)</p>
 <h2 id="news-and-history"><a href="#news-and-history">News and history</a></h2>
 <p>For breaking news, follow <a href="https://twitter.com/muforth">@muforth</a>.</p>
@@ -46,6 +59,7 @@
 <li><a href="/2009/">2009 journal</a></li>
 <li><a href="/2008/">2008 journal</a></li>
 </ul>
+<p>The original <a href="/readme/">README</a> &ndash; though outdated in many ways &ndash; is a good introduction to why I wrote muforth and what I was trying to achieve. It describes the native-code compiler version of the system. That, and a few other things &ndash; notably create/does, the tokeniser, and the <em>lack</em> of tail-recursion in the threaded version &ndash; have changed since the <a href="/readme/">README</a> was written, but much of it is still true, applicable, and hopefully of interest.</p>
 <h2 id="talks"><a href="#talks">Talks</a></h2>
 <p>In March 2008 I gave a <a href="http://www.vimeo.com/859408">talk</a> about bootstrapping, muforth, and <a href="http://www.nimblemachines.com/convivial-tool/">convivial tool</a>s.</p>
 <p>A warning: I wave my arms around a lot, and the audio isn&rsquo;t that great, but you might find it amusing.</p>
@@ -54,7 +68,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">Send feedback</a> on this page (last edited 2017 April 11 16:42)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20muforth%3a%20a%20simple%20ITC%20Forth">Send feedback</a> on this page (last edited 2017 April 11 17:43)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
