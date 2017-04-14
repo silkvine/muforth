@@ -152,14 +152,13 @@
 <p>Note that we are passing an increment to <code class="forth">doit+</code> (the -3 value) and using <code class="forth">dup</code> to make a copy of it before calling <code class="forth">+loop</code> so we can use it the next time around as well. Since at the end of the loop the increment will <em>still</em> be sitting on the stack, we <code class="forth">drop</code> when we are done.</p>
 <p>As before, keep typing <code>cont</code> until IP is unstarred. Try some other increments, limits, and indices and see what happens. Since the stack dump shows unsigned hex values it can be hard to see what&rsquo;s going on here. The first time you stop at the bug, try doing</p>
 <pre>
-  \f over .
+  over .
 </pre>
 <p>to see the increment value (-3). And <em>every</em> time you stop at the bug, try</p>
 <pre>
-  \f dup .
+  dup .
 </pre>
 <p>to see the current loop index. <code class="forth">.</code> will sign-extend the 32-bit target value to 64-bits and then print it as a signed number. This should help. Remember too: all those loop values are in <em>hexadecimal</em>! So, -10 is really -16 (decimal), and -20 is really -32 (decimal).</p>
-<p>What is that <code class="forth">\f</code> doing there? We can&rsquo;t execute the target versions of <code class="forth">over</code> or <code class="forth">dup</code> because that will clobber our execution state. <code class="forth">\f</code> means &ldquo;treat the next token as a <em>host</em> Forth word, not as a <em>target</em> word&rdquo;. It&rsquo;s kind of an escape hatch. It&rsquo;s also possible to execute a series of host Forth words by putting them inside curly braces (<code class="forth">{</code> and <code class="forth">}</code>).</p>
 <p>Does the behaviour of <code class="forth">doit+</code> make sense? Try different values of the increment, limit, and index.</p>
 <p>Using negative increments with do loops seems to have odd behaviour in that the idea of &ldquo;reaching or crossing&rdquo; the limit seems different from the behaviour with positive increments.</p>
 <p>The behaviour that you see here conforms to &ldquo;standard&rdquo; Forth practice, and is essentially a result of the <em>implementation</em>: the index value is translated (shifted along the integer &ldquo;number line&rdquo;) so that the loop terminates when the translated index crosses the threshold from <code>0000_0000</code> to <code>ffff_ffff</code> (when counting down) or from <code>ffff_ffff</code> to <code>0000_0000</code> (when counting up). You can see the translated index in the IX register during loop execution.</p>
@@ -195,7 +194,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 12 14:43)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Getting%20started%20with%20RISC-V">Send feedback</a> on this page (last edited 2017 April 14 15:35)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fgetting-started-with-risc-v%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
