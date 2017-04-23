@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="Forth, muforth, threaded code, ITC, DTC, NEXT, indirect-threaded code, direct-threaded code, implementation, language implementation, code field address, cfa, parameter field address, pfa" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/threaded-code/" />
+<title>Threaded code &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>Threaded code</h1>
+<hr />
+</div>
+
+<div id="content">
+<p>My aim here is to tackle threaded code. What it is, why it is, how it works, and why it&rsquo;s great (and also not so great).</p>
+<p>Rather than starting with a definition and then attempting an explanation of the definition, I want to start with a thought experiment.</p>
+<p>Take a program. Then refactor it in such a way that it consists entirely of only two kinds of routines:</p>
+<ul>
+<li>leaf routines, which compute and do I/O, but which make no calls to other code</li>
+<li>twig routines, which do <em>no</em> computation or I/O; instead, they <em>only</em> call other code (which can be twig or leaf routines)</li>
+</ul>
+<p>(I was tempted to use the usual tree-structure names of &ldquo;leaf&rdquo; and &ldquo;branch&rdquo;, but branch is overloaded with the idea of a jump, which might be confusing in this context. So: twig.)</p>
+<p>The performance-minded among you are now aghast. &ldquo;What? No open-coded arithmetic? No inlining of functions?&rdquo;</p>
+<p>Yes, it&rsquo;s true. Our restructuring has a performance cost, but is has advantages too. We&rsquo;ll get to both.</p>
+<p>Since our twig routines now consist entirely of calls (except for the last instruction, a &ldquo;return&rdquo;) we can remove the call opcodes. We end up with a list of addresses. The return instruction that ended our original routine is replaced by the address of a special &ldquo;exit&rdquo; routine.</p>
+<p>The tail-recursively-minded among you will have already objected &ldquo;But that last call and return can be replaced by a jump!&rdquo; Not so with threaded code. There is no way to say we want to &ldquo;jump&rdquo; to an address rather than &ldquo;call&rdquo; it, so we lose the ability to convert tail calls to jumps. Twig routines always end with the address of the &ldquo;exit&rdquo; routine. Another disadvantage to threading. However, we soldier on. With the opcodes removed, our twig routine is no longer code. We can&rsquo;t &ldquo;call&rdquo; it and expect anything good to happen. The CPU will happily start interpreting the list of addresses as instructions and head off into the weeds.</p>
+<p>We need a <em>header</em> of some kind that tells the CPU that this is not a leaf routine (which we haven&rsquo;t changed &ndash; it is still machine code) but a twig routine. The header is generally a call to <em>another</em> special &ldquo;runtime&rdquo; routine. What should this routine do? Because we have been <em>called</em>, we must have been called by another twig routine. Just as with machine code that calls other machine code, we need to push a call stack of some kind. But what do we push onto the stack?</p>
+<p>Let&rsquo;s back up. We haven&rsquo;t talked about <em>how we are interpreting the list of addresses</em> that make up the body of a twig routine.</p>
+<p>We need a tiny piece of code somewhere that fetches the next address and &ldquo;executes&rdquo; the routine that it points to. (I am being purposely vague here.) We are fetching and executing &ldquo;instructions&rdquo;, which means we need our own &ldquo;program counter&rdquo; or &ldquo;address pointer&rdquo; or whatever you want to call it, which will always point to the next &ldquo;instruction&rdquo; (really an address) to execute. In the Forth world this pointer is usually called <strong>IP</strong> &ndash; the &ldquo;instruction&rdquo; (or perhaps &ldquo;interpretation&rdquo;) pointer. Our tiny piece of code will fetch the &ldquo;instruction&rdquo; (address) that IP points to, increment IP by the size (in bytes) of an address, and then somehow &ldquo;execute&rdquo; the code at that address.</p>
+<p>I&rsquo;m not sure about other language communities, but in the Forth community this tiny piece of code is called <strong>NEXT</strong>. Its only job: to execute the next address in the list.</p>
+<p>Now that we have an idea of what it means to execute a list of addresses, what happens when a twig routine calls another twig routine? In order to interpret the list of addresses in the <em>called</em> twig routine we have to set IP to point to the first address and then run NEXT. But at that moment IP points to the place in the caller&rsquo;s list of addresses that we should return to, and we don&rsquo;t want to clobber it, otherwise we would &ldquo;lose our place&rdquo; in the execution of the calling twig routine.</p>
+<p>Thus, before setting IP to point to the first address in the called word, we have to push the caller&rsquo;s IP onto our call stack.</p>
+<p>And this is <em>precisely</em> the code that the header of our twig routine calls. I call it <strong>NEST</strong>.</p>
+<p>The dual of this &ndash; the special &ldquo;exit&rdquo; routine alluded to above, the address of which ends every list of addresses in a twig routine &ndash; I call <strong>UNNEST</strong>. It pops the previous IP off the call stack, and then runs NEXT, thus resuming interpretation in the calling twig routine.</p>
+<p>We have all the pieces now, but a few questions remain. Where is NEXT? And <em>what</em> is NEXT?</p>
+<p>We can do another thought experiment. Let&rsquo;s say we are executing NEST. We push the caller&rsquo;s IP, set IP to point to the first address in our called twig routine... And then what? Do we return? If so, to what? There isn&rsquo;t a &ldquo;main&rdquo; machine code routine to return to. Weirdly, there isn&rsquo;t a loop somewhere that repeatedly executes NEXT. Instead, NEXT is <em>everywhere</em>.</p>
+<p>Every leaf routine ends, not with a return instruction, but with NEXT. NEST ends with NEXT. UNNEST ends with NEXT.</p>
+<p>To &ldquo;fire up&rdquo; this interpreter, all we have to do is set IP to point somewhere, and then execute NEXT. Any NEXT. Anywhere. At this point, our threaded code interpreter is off and running.</p>
+<p>To recap: We need three small routines to make all this work: NEXT, NEST, and UNNEST.</p>
+<pre>
+  NEXT:    Fetch the address pointed to by IP
+           Increment IP by address size
+           Jump to fetched address
+</pre>
+<pre>
+  NEST:    Push IP onto call stack
+           Set IP to point to the first address of the called twig routine
+           Execute NEXT
+</pre>
+<pre>
+  UNNEST:  Pop IP from call stack
+           Execute NEXT
+</pre>
+<p>Because NEXT is short &ndash; often one to three instructions &ndash; it is usually copied inline into the body of NEST, UNNEST, and any other leaf routines.</p>
+<h3 id="direct-threaded-code-dtc"><a href="#direct-threaded-code-dtc">Direct-threaded code (DTC)</a></h3>
+<p>What I have just described is usually referred to as <em>direct-threaded code</em> (DTC). It is <em>direct</em> because NEXT jumps directly to the address fetched from the list of addresses that make up the body of a twig routine.</p>
+<p>Because Forth has two stacks &ndash; a data (or parameter) stack, and a return (or call) stack, we should be clear that NEST and UNNEST push and pop the <em>return</em> stack (often called the R stack). In fact, I don&rsquo;t see how this threading model can work with a single stack.</p>
+<p>(Side note: Forth&rsquo;s call stack and the machine&rsquo;s call stack do not have to be the same! And often they are not. If the machine has push and pop operations it is usually more efficient to use the machine&rsquo;s call stack as the Forth data stack, and to put the Forth call stack (the return, or &ldquo;R&rdquo; stack) somewhere else.)</p>
+<p>It&rsquo;s not clear from my description above how NEST computes the new IP (the address of the first address in the list). There are two ways to do it.</p>
+<p>If the &ldquo;header&rdquo; of the twig routine is a <em>call</em> to NEST, then NEST can pop the (machine&rsquo;s) call stack. The popped address will be the address of the first address in the list. (This is the semantics of any call instruction: push the following address onto the machine&rsquo;s call stack, then jump to the destination. We are &ldquo;misusing&rdquo; call to push the address of the list of addresses, which immediately follow the call in memory.)</p>
+<p>But there is another way, and it&rsquo;s often more efficient. We designate another machine register &ndash; often called W (for &ldquo;word&rdquo;, as pieces of Forth code are usually referred to as &ldquo;words&rdquo;) &ndash; for use by NEXT and NEST, and modify them thus:</p>
+<pre>
+  NEXT:    Fetch into W the address pointed to by IP
+           Increment IP by address size
+           Jump to W
+</pre>
+<pre>
+  NEST:    Push IP onto call stack
+           Set IP to W + sizeof(Jump)
+           Execute NEXT
+</pre>
+<p>Now the &ldquo;call NEST&rdquo; is replaced by &ldquo;jump NEST&rdquo; in the twig routine&rsquo;s header. Since W points to the header, by offseting it (by the size of the jump instruction), we can calculate the address of the first address in the list, which directly follows the jump to NEST. We set IP to this address.</p>
+<p>Our two kinds of words &ndash; leaf and twig &ndash; now look like this:</p>
+<pre>
+  leaf word             twig word
+  ~~~~~~~~~             ~~~~~~~~~
+  machine code          jump NEST
+  machine code          address 1
+     ...                address 2
+  machine code             ...
+  NEXT                  address n
+                        address of UNNEST
+</pre>
+<p>When NEXT executes a leaf word, that &ldquo;Jump to W&rdquo; jumps directly to machine code. But when it executes a twig word, it jumps to a jump. We all know how terrible this is! Pipeline reload time!</p>
+<p>What if we replaced this &ldquo;code indirection&rdquo; &ndash; a jump to a jump &ndash; with a <em>data</em> indirection?</p>
+<p>Enter...</p>
+<h3 id="indirect-threaded-code-itc"><a href="#indirect-threaded-code-itc">Indirect-threaded code (ITC)</a></h3>
+<p>By replacing the jump NEST (or call NEST) instruction at the beginning of every twig word with a <em>pointer</em> to NEST, and by adding an indirection to NEXT:</p>
+<pre>
+  NEXT:    Fetch into W the address pointed to by IP
+           Increment IP by address size
+           Fetch into X the address pointed to by W
+           Jump to X
+</pre>
+<p>and by making a small change to NEST:</p>
+<pre>
+  NEST:    Push IP onto call stack
+           Set IP to W + address size
+           Execute NEXT
+</pre>
+<p>we arrive at indirect-threaded code, also known as ITC.</p>
+<p>Remember: DTC is <em>direct</em> because NEXT jumps directly to the address fetched from the list of addresses that make up the body of a twig routine.</p>
+<p>Thus: ITC is <em>indirect</em> because NEXT jumps indirectly <em>through</em> the address fetched from the list of addresses that make up the body of a twig routine.</p>
+<p>I&rsquo;ve written the above version of ITC NEXT the way you would write it for a RISC machine. A CISC machine with auto-increment addressing can collapse the first two instructions into one; one with indirect addressing can collapse the last two into one.</p>
+<p>ITC NEXT is two instructions on the MSP430, and four &ndash; basically the four steps outlined above &ndash; on RISC-V.</p>
+<p>There is another change we need to make for indirect threading to work. With DTC the bodies of both leaf and twig words started with <em>machine code</em>; with ITC, the bodies of both have to start with a <em>pointer to machine code</em>.</p>
+<p>Which means we have to change our leaf words for ITC. We add a machine code pointer that simply points to the code that follows it.</p>
+<pre>
+  leaf word             twig word
+  +----------+          +----------+
+  |   addr   |---+      |   addr   |-------> NEST
+  +----------+   |      +----------+
+  machine code &lt;-+      address 1
+  machine code          address 2
+     ...                   ...
+  machine code          address n
+  NEXT                  address of UNNEST
+</pre>
+<h3 id="useful-nomenclature"><a href="#useful-nomenclature">Useful nomenclature</a></h3>
+<p>Since it&rsquo;s tricky to explain all this, it&rsquo;s useful to have a common vocabulary when talking about threading and the structure of words in a threaded system. Again, since it&rsquo;s what I&rsquo;m familiar with, I&rsquo;m going to use the Forth terminology.</p>
+<p>The machine code pointer at the start of every word in an ITC system is called a <strong>code pointer</strong>.</p>
+<p>That first slot of a word &ndash; in both ITC and DTC systems &ndash; is called the <strong>code field</strong>, and the body that follows &ndash; machine code in the case of a leaf word, and addresses in a twig word &ndash; is called the <strong>parameter field</strong>.</p>
+<p>Leaf words are called <strong>code</strong> words, and twig words are called <strong>colon</strong> words. These names come from the Forth words that construct them: <code class="forth">code</code> and <code class="forth">:</code>.</p>
+<p>Since we would like to be able to think and talk clearly about indirection, we give names to two important addresses:</p>
+<p>The address of a code field is called, unsurprisingly, a <strong>code field address</strong> &ndash; usually abbreviated <strong>cfa</strong>.</p>
+<p>The address of a parameter field is called, also unsurprisingly, a <strong>parameter field address</strong> &ndash; usually abbreviated <strong>pfa</strong>.</p>
+<p>In a DTC system, a cfa points to a code field, which <em>contains</em> machine code.</p>
+<p>In an ITC system, a cfa points to a code field, which <em>points to</em> machine code.</p>
+<p>In both cases, the addresses in the body (parameter field) of a colon word (twig word) are all cfa&rsquo;s. (Note: It&rsquo;s possible to use pfa&rsquo;s instead, and <a href="/threaded-code-variations-on-a-theme/">there are good reasons to do this</a>.</p>
+<h3 id="everything-is-executable"><a href="#everything-is-executable">Everything is executable!</a></h3>
+<p>We are not yet at the end of our story!</p>
+<p>It turns out that code and colon (leaf and twig) words are <em>not</em> the only kinds of words in a threaded code system. What about data?</p>
+<p>I&rsquo;ll use the examples of two common Forth data types: variable and constants</p>
+<p>While there are probably other approaches, on threaded Forth systems everything in the system &ndash; including data types! &ndash; has executable behaviour. You can &ndash; and indeed <em>must</em> &ndash; run everything.</p>
+<p>What might it mean to <em>execute</em> a variable or a constant? Let&rsquo;s start with constants, since they are simpler (though both are straightforward).</p>
+<p>A constant pushes its value onto the data stack. That&rsquo;s it!</p>
+<p>Can we turn this <em>idea</em> of a constant into a structure in memory that will work with our threaded interpreter? Here is how:</p>
+<pre>
+     DTC                  ITC
+  hex-fives            hex-fives
+  ~~~~~~~~~            ~~~~~~~~~
+  jump to CONSTANT     address of CONSTANT    (code field)
+  5555_5555            5555_5555              (parameter field)
+</pre>
+<p>In both cases &ndash; DTC and ITC &ndash; the representation consists of a code field and a parameter field &ndash; just like code and colon words. Whereas colon words have a code field that refers to NEST, constants have a code field that refers to CONSTANT, which looks like this:</p>
+<pre>
+  CONSTANT: Add to W the size of the code field
+            Fetch value pointed to by W into W
+            Push W onto the data stack
+            Execute NEXT
+</pre>
+<p>Remember that after executing NEXT, W contains a cfa: it points to the code field, <em>not</em> the parameter field. (Actually, this isn&rsquo;t <a href="/threaded-code-variations-on-a-theme/">written in stone</a>.)</p>
+<p>If we use hex-fives in a colon word, it gets compiled like any other word. To add hex-fives to the value on the top of the data stack, we would compile the following address list:</p>
+<pre>
+  address of hex-fives
+  address of +
+</pre>
+<p>Variables are only slightly more complicated. Variables in Forth are treated like ML references: you have to explicitly dereference them. There are two words to do this: <code class="forth">@</code> (&ldquo;fetch&rdquo;) and <code class="forth">!</code> &ldquo;store&rdquo;. <code class="forth">@</code> consumes an address from the data stack, fetches its value from memory, and pushes that value onto to the data stack; <code class="forth">!</code> consumes a value and an address from the data stack, and stores the value at that address in memory.</p>
+<p>What does a variable <em>do</em>? It pushes the <em>address</em> of its value onto the data stack.</p>
+<p>Variables look like this:</p>
+<pre>
+     DTC                  ITC
+    radix                radix
+  ~~~~~~~~~            ~~~~~~~~~
+  jump to VARIABLE     address of VARIABLE    (code field)
+  2                    2                      (parameter field)
+</pre>
+<p>Here we have a variable called &ldquo;radix&rdquo; with the current value 2 (we are in binary).</p>
+<p>The code that all variables execute is remarkably similar to CONSTANT:</p>
+<pre>
+  VARIABLE: Add to W the size of the code field
+            Push W onto the data stack
+            Execute NEXT
+</pre>
+<p>Simple examples:</p>
+<pre>
+  radix @
+</pre>
+<p>fetches the current value;</p>
+<pre>
+  10 radix !
+</pre>
+<p>changes the radix to 10 (now we are in decimal).</p>
+<p>It is out of the scope of this discussion, but every Forth system has mechanisms for creating new kinds of data with their own, specific execution behaviours.</p>
+<h3 id="threaded-code-advantages"><a href="#threaded-code-advantages">Threaded code advantages</a></h3>
+<p>Elegance, simplicity, uniformity, code density.</p>
+<p>It&rsquo;s quite easy to bring up a threaded-code implementation on a new architecture, and, once running, high-level tools written for a completely different architecture are likely to work unmodified, or with very small modifications.</p>
+<p>The structural uniformity makes it very easy to extend and modify <em>without changing the underlying implementation</em>. I can add new data structures and new control structures at will without modifying the core compiler.</p>
+<p>Because we cannot inline code, everything becomes a separate word. This has an interesting side effect: it aggressively removes <em>redundancy</em> from programs, which tend to become much smaller.</p>
+<p>On occasion, threading is actually <em>faster</em> than native code. In native code a subroutine call requires the equivalent of two jumps: the call, and the return. On pipelined machines these can take several cycles.</p>
+<p>When executing code words in a threaded system, only <em>one</em> jump is required! Only <em>one</em> execution of NEXT is required to execute a word. As a result, on some systems, DTC can be faster than call/return, and ITC is often no worse that call/return (but much more powerful).</p>
+<h3 id="threaded-code-disadvantages"><a href="#threaded-code-disadvantages">Threaded code disadvantages</a></h3>
+<p>Speed, and, sometimes, size.</p>
+<p>Since we lose the ablitily to do any kind of code inlining, even simple things like &ldquo;add these two numbers&rdquo; have to be written as separate routines and &ldquo;called&rdquo; via NEXT. This is obviously slower than inlining.</p>
+<p>In terms of size, on processors where an instruction is smaller than an address &ndash; eg, on 32-bit machines with 16-bit instructions &ndash; native code can sometimes be denser, but generally the &ldquo;deduplication&rdquo; that threading requires will offset this.</p>
+<h3 id="conclusions"><a href="#conclusions">Conclusions</a></h3>
+<p>Threaded code is an extraordinarily simple and elegant way to implement language interpreters. Compared to bytecoded interpreters it is quite fast, and compilers for it are essentially trivial.</p>
+<p>Because it creates a system entirely composed of uniform pieces, extensibility of the system by users is almost unlimited, and building generic tools is dramatically simplified!</p>
+<p>All this for a modest execution time penalty... ;-)</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 23 14:25)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
+<a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
+</div>
+
+</body>
+</html>
