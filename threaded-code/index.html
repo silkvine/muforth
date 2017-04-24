@@ -135,7 +135,7 @@
 <p>The address of a parameter field is called, also unsurprisingly, a <strong>parameter field address</strong> &ndash; usually abbreviated <strong>pfa</strong>.</p>
 <p>In a DTC system, a cfa points to a code field, which <em>contains</em> machine code.</p>
 <p>In an ITC system, a cfa points to a code field, which <em>points to</em> machine code.</p>
-<p>In both cases, the addresses in the body (parameter field) of a colon word (twig word) are all cfa&rsquo;s. (Note: It&rsquo;s possible to use pfa&rsquo;s instead, and <a href="/threaded-code-variations-on-a-theme/">there are good reasons to do this</a>.</p>
+<p>In both cases, the addresses in the body (parameter field) of a colon word (twig word) are all cfa&rsquo;s. (Note: It&rsquo;s possible to use pfa&rsquo;s instead, and <a href="/threaded-code-variations/">there are good reasons to do this</a>.</p>
 <h3 id="everything-is-executable"><a href="#everything-is-executable">Everything is executable!</a></h3>
 <p>We are not yet at the end of our story!</p>
 <p>It turns out that code and colon (leaf and twig) words are <em>not</em> the only kinds of words in a threaded code system. What about data?</p>
@@ -153,12 +153,12 @@
 </pre>
 <p>In both cases &ndash; DTC and ITC &ndash; the representation consists of a code field and a parameter field &ndash; just like code and colon words. Whereas colon words have a code field that refers to NEST, constants have a code field that refers to CONSTANT, which looks like this:</p>
 <pre>
-  CONSTANT: Add to W the size of the code field
-            Fetch value pointed to by W into W
+  CONSTANT: Add to W the size of the code field (calculate pfa)
+            Fetch value pointed to by W into W (fetch contents of parameter field)
             Push W onto the data stack
             Execute NEXT
 </pre>
-<p>Remember that after executing NEXT, W contains a cfa: it points to the code field, <em>not</em> the parameter field. (Actually, this isn&rsquo;t <a href="/threaded-code-variations-on-a-theme/">written in stone</a>.)</p>
+<p>Remember that after executing NEXT, W contains a cfa: it points to the code field, <em>not</em> the parameter field. (Actually, this isn&rsquo;t <a href="/threaded-code-variations/">written in stone</a>.)</p>
 <p>If we use hex-fives in a colon word, it gets compiled like any other word. To add hex-fives to the value on the top of the data stack, we would compile the following address list:</p>
 <pre>
   address of hex-fives
@@ -211,7 +211,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 23 18:25)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 24 16:08)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>

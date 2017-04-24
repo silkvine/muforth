@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="Forth, muforth, threaded code, ITC, DTC, NEXT, indirect-threaded code, direct-threaded code, implementation, language implementation, control structures, compiler" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/loops-branches-and-literals/" />
+<title>Loops, branches, and literals &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>Loops, branches, and literals</h1>
+<hr />
+</div>
+
+<div id="content">
+<p>While writing my <a href="/threaded-code/">introduction to threaded code</a> I suggested that non-leaf routines &ndash; colon words, in Forth lingo &ndash; can be represented as a list of addresses that get executed in sequence. This suggested that all code executes in a straight line and then returns to its caller. We all know this isn&rsquo;t true, but threaded code that runs in a straight line is already tricky and tedious to explain; explaining literals and control structures at the same time seemed like too much.</p>
+<p>But we are here now, and we understand how threading-in-a-straight-line works, so let&rsquo;s see how loops, branches, and literals work in a threaded world.</p>
+<hr />
+<p>In the real world, code doesn&rsquo;t always execute in a straight line and then return &ndash; and yet, at the moment, which the machinery that we&rsquo;ve defined so far, that&rsquo;s all we can do. We also have no way to represent literal data &ndash; addresses or numbers that we might want to compute with. We can write a code word called <code class="forth">+</code> that pops two values off the data stack, adds them, and pushes the result, but if we want to add 8 to something, how do we do that?</p>
+<p>With just three runtime code words we can add if/then/else, while loops, and literals to our system.</p>
+<p>The names are arbitrary, but in many Forth systems the convention is to give them parenthesized names. These are not words that mere mortals normally execute; they exist as part of the hidden &ldquo;runtime fabric&rdquo; of the system. The parentheses suggest their &ldquo;underlying&rdquo; or &ldquo;runtime&rdquo; nature.</p>
+<p>Here they are:</p>
+<pre>
+  (lit)      Fetch into W the address pointed to by IP
+             Increment IP by address size (skip literal)
+             Push W onto the data stack
+             Execute NEXT
+</pre>
+<pre>
+  (branch)   Fetch into W the address pointed to by IP
+             Set IP to W
+             Execute NEXT
+</pre>
+<pre>
+  (0branch)  Pop a value off the data stack
+             If the value is zero, execute (branch)
+             Otherwise, increment IP by address size (skip branch address)
+</pre>
+<p>The <code class="forth">(branch</code>) above does an <em>absolute</em> branch. If you prefer relative branches, modify it thus:</p>
+<pre>
+  (branch)   Fetch into W the address pointed to by IP
+             Set IP to IP + W
+             Execute NEXT
+</pre>
+<p>Let&rsquo;s assume we have a code word <code class="forth">+</code> that adds two values. To create a word that adds 8 to whatever is on the top of the stack, we would create a colon word with the following (textual) definition:</p>
+<pre>
+  : add8   8 +  ;
+</pre>
+<p>which, assuming an ITC system, would get compiled to:</p>
+<pre>
+  add8
+  ~~~~
+  address of NEST     ( all colon words start with this)
+  address of (lit)
+  8
+  address of +
+  address of UNNEST
+</pre>
+<p>The <code class="forth">;</code> adds the address of UNNEST at the end and ends the compilation.</p>
+<p>(This is getting outside the scope of our discussion, which is about the <em>execution machinery</em>, but in Forth systems <code class="forth">;</code> has <em>two</em> tasks: to compile the address of UNNEST, and to exit &ldquo;compilation mode&rdquo; &ndash; a special mode of <em>textual</em> interpretation that is the essence of the Forth compiler &ndash; and return to normal &ldquo;interpretation&rdquo; mode.)</p>
+<p>For if/then/else and looping we use <em>flag</em> values &ndash; truth values &ndash; that we compute and leave on the stack for <code class="forth">(0branch</code>) to test and consume.</p>
+<p>To make this even more concrete, let&rsquo;s add five more code words to our system:</p>
+<pre>
+  &lt;       Pop two values off the data stack
+          If the first is less than the second, push -1
+          Otherwise, push 0
+          Execute NEXT
+</pre>
+<pre>
+  0=      Pop a value off the data stack
+          If the value is zero, push -1
+          Otherwise, push 0
+          Execute NEXT
+</pre>
+<pre>
+  dup     Pop a value off the data stack
+          Push it back onto data stack
+          Push it a second time
+          Execute NEXT
+</pre>
+<pre>
+  2dup    Pop two values off the data stack
+          Push them back onto data stack, in the same order
+          Push them a second time, also in the same order
+          Execute NEXT
+</pre>
+<pre>
+  swap    Pop two values off the data stack
+          Push them back onto data stack, in the reverse order
+          Execute NEXT
+</pre>
+<p>In many Forth systems -1 is the preferred &ldquo;true&rdquo; value because it is represented (on almost all machines!!) by an all-ones bit pattern, which can be logically ANDed with other values... but we digress. ;-)</p>
+<p>From our definition of <code class="forth">(0branch</code>) above it should be clear that <em>any</em> non-zero value is true, and only zero is false.</p>
+<p>Let&rsquo;s write a simple loop. (There is a better, more efficient, and more idiomatic way to do this, but it is outside the scope of this example. ;-)</p>
+<pre>
+  -8   begin  1 +  dup 0= until
+</pre>
+<p>This will get compiled to the following &ldquo;address list&rdquo;:</p>
+<pre>
+  0000  address of (lit)
+  0004  -8
+  0008  address of (lit)
+  000c  1
+  0010  address of +
+  0014  address of dup
+  0018  address of 0=
+  001c  address of (0branch)
+  0020  0008
+  0024  ...
+</pre>
+<p>We have to <code class="forth">dup</code> the value before we test it with <code class="forth">0=</code> because <code class="forth">0=</code> <em>consumes</em> the value before pushing its true or false flag.</p>
+<p>The word <code class="forth">begin</code> compiles no code; it &ldquo;marks&rdquo; the location that <code class="forth">(0branch</code>) later branches back to.</p>
+<p>I&rsquo;ve added memory addresses in hex (which assume a byte-addressed machine with 32-bit addresses) to make the branch destination easier to describe.</p>
+<p>We write if/then like this:</p>
+<pre>
+  2dup &lt;  if  swap  then
+</pre>
+<p>This compiles to the following:</p>
+<pre>
+  0000  address of 2dup
+  0004  address of &lt;
+  0008  address of (0branch)
+  000c  001c
+  0010  address of swap
+  001c  ...
+</pre>
+<p>As before, we <code class="forth">2dup</code> the values because <code class="forth">&lt;</code> consumes them.</p>
+<p>Like <code class="forth">begin</code>, <code class="forth">then</code> compiles no code; it resolves the forward branch that <code class="forth">if</code> compiled. Words like if, then, begin, and until are called <em>compiling</em> words because they execute at compile time and do something special, like resolve a forward or backward branch address.</p>
+<p>Adding an <code class="forth">else</code> clause looks like this:</p>
+<pre>
+  0= if  4  else  8  then  +
+</pre>
+<p>This code compiles to:</p>
+<pre>
+  0000  address of 0=
+  0004  address of (0branch)
+  0008  001c
+  000c  address of (lit)
+  0010  4
+  0014  address of (branch)
+  0018  0024
+  001c  address of (lit)
+  0020  8
+  0024  address of +
+  0028  ...
+</pre>
+<p><code class="forth">if</code> compiles the <code class="forth">(0branch</code>), <code class="forth">else</code> compiles the <code class="forth">(branch</code> and resolves the forward <code class="forth">(0branch</code>), and <code class="forth">then</code> resolves the forward <code class="forth">(branch</code>).</p>
+<p>Remember: <code class="forth">(0branch</code>) means branch if <em>false</em>.</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Loops%2c%20branches%2c%20and%20literals">Send feedback</a> on this page (last edited 2017 April 24 16:08)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
+<a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2floops-branches-and-literals%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
+</div>
+
+</body>
+</html>
