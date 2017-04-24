@@ -31,15 +31,16 @@
 <p>The performance-minded among you are now aghast. &ldquo;What? No open-coded arithmetic? No inlining of functions?&rdquo;</p>
 <p>Yes, it&rsquo;s true. Our restructuring has a performance cost, but is has advantages too. We&rsquo;ll get to both.</p>
 <p>Since our twig routines now consist entirely of calls (except for the last instruction, a &ldquo;return&rdquo;) we can remove the call opcodes. We end up with a list of addresses. The return instruction that ended our original routine is replaced by the address of a special &ldquo;exit&rdquo; routine.</p>
-<p>The tail-recursively-minded among you will have already objected &ldquo;But that last call and return can be replaced by a jump!&rdquo; Not so with threaded code. There is no way to say we want to &ldquo;jump&rdquo; to an address rather than &ldquo;call&rdquo; it, so we lose the ability to convert tail calls to jumps. Twig routines always end with the address of the &ldquo;exit&rdquo; routine. Another disadvantage to threading. However, we soldier on. With the opcodes removed, our twig routine is no longer code. We can&rsquo;t &ldquo;call&rdquo; it and expect anything good to happen. The CPU will happily start interpreting the list of addresses as instructions and head off into the weeds.</p>
+<p>The tail-recursively-minded among you will have already objected &ldquo;But that last call and return can be replaced by a jump!&rdquo; Not so with threaded code. There is no way to say we want to &ldquo;jump&rdquo; to an address rather than &ldquo;call&rdquo; it, so we lose the ability to convert tail calls to jumps. Twig routines always end with the address of the &ldquo;exit&rdquo; routine. Another disadvantage to threading. However, we soldier on.</p>
+<p>With the opcodes removed, our twig routine is no longer code. We can&rsquo;t &ldquo;call&rdquo; it and expect anything good to happen. The CPU will happily start interpreting the list of addresses as instructions and head off into the weeds.</p>
 <p>We need a <em>header</em> of some kind that tells the CPU that this is not a leaf routine (which we haven&rsquo;t changed &ndash; it is still machine code) but a twig routine. The header is generally a call to <em>another</em> special &ldquo;runtime&rdquo; routine. What should this routine do? Because we have been <em>called</em>, we must have been called by another twig routine. Just as with machine code that calls other machine code, we need to push a call stack of some kind. But what do we push onto the stack?</p>
 <p>Let&rsquo;s back up. We haven&rsquo;t talked about <em>how we are interpreting the list of addresses</em> that make up the body of a twig routine.</p>
 <p>We need a tiny piece of code somewhere that fetches the next address and &ldquo;executes&rdquo; the routine that it points to. (I am being purposely vague here.) We are fetching and executing &ldquo;instructions&rdquo;, which means we need our own &ldquo;program counter&rdquo; or &ldquo;address pointer&rdquo; or whatever you want to call it, which will always point to the next &ldquo;instruction&rdquo; (really an address) to execute. In the Forth world this pointer is usually called <strong>IP</strong> &ndash; the &ldquo;instruction&rdquo; (or perhaps &ldquo;interpretation&rdquo;) pointer. Our tiny piece of code will fetch the &ldquo;instruction&rdquo; (address) that IP points to, increment IP by the size (in bytes) of an address, and then somehow &ldquo;execute&rdquo; the code at that address.</p>
 <p>I&rsquo;m not sure about other language communities, but in the Forth community this tiny piece of code is called <strong>NEXT</strong>. Its only job: to execute the next address in the list.</p>
 <p>Now that we have an idea of what it means to execute a list of addresses, what happens when a twig routine calls another twig routine? In order to interpret the list of addresses in the <em>called</em> twig routine we have to set IP to point to the first address and then run NEXT. But at that moment IP points to the place in the caller&rsquo;s list of addresses that we should return to, and we don&rsquo;t want to clobber it, otherwise we would &ldquo;lose our place&rdquo; in the execution of the calling twig routine.</p>
 <p>Thus, before setting IP to point to the first address in the called word, we have to push the caller&rsquo;s IP onto our call stack.</p>
-<p>And this is <em>precisely</em> the code that the header of our twig routine calls. I call it <strong>NEST</strong>.</p>
-<p>The dual of this &ndash; the special &ldquo;exit&rdquo; routine alluded to above, the address of which ends every list of addresses in a twig routine &ndash; I call <strong>UNNEST</strong>. It pops the previous IP off the call stack, and then runs NEXT, thus resuming interpretation in the calling twig routine.</p>
+<p>And this is <em>precisely</em> the code that the header of our twig routine calls. I call it <strong>NEST</strong>. It is often called <strong>DOCOLON</strong> (for reasons that should become clear later).</p>
+<p>The dual of this &ndash; the special &ldquo;exit&rdquo; routine alluded to above, the address of which ends every list of addresses in a twig routine &ndash; I call <strong>UNNEST</strong>. It pops the previous IP off the call stack, and then runs NEXT, thus resuming interpretation in the calling twig routine. (Many Forths call this <strong>EXIT</strong>, for obvious reasons.)</p>
 <p>We have all the pieces now, but a few questions remain. Where is NEXT? And <em>what</em> is NEXT?</p>
 <p>We can do another thought experiment. Let&rsquo;s say we are executing NEST. We push the caller&rsquo;s IP, set IP to point to the first address in our called twig routine... And then what? Do we return? If so, to what? There isn&rsquo;t a &ldquo;main&rdquo; machine code routine to return to. Weirdly, there isn&rsquo;t a loop somewhere that repeatedly executes NEXT. Instead, NEXT is <em>everywhere</em>.</p>
 <p>Every leaf routine ends, not with a return instruction, but with NEXT. NEST ends with NEXT. UNNEST ends with NEXT.</p>
@@ -174,10 +175,10 @@
   2                    2                      (parameter field)
 </pre>
 <p>Here we have a variable called &ldquo;radix&rdquo; with the current value 2 (we are in binary).</p>
-<p>The code that all variables execute is remarkably similar to CONSTANT:</p>
+<p>The code that all variables execute is remarkably similar to CONSTANT. Where CONSTANT pushed <em>value</em> stored in the parameter field, VARIABLE pushes the __address_ of the parameter field &ndash; the pfa.</p>
 <pre>
-  VARIABLE: Add to W the size of the code field
-            Push W onto the data stack
+  VARIABLE: Add to W the size of the code field (ie, calculate pfa)
+            Push W onto the data stack (push pfa)
             Execute NEXT
 </pre>
 <p>Simple examples:</p>
@@ -210,7 +211,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 23 14:25)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 23 18:25)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
