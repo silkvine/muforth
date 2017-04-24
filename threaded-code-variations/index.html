@@ -21,7 +21,7 @@
 
 <div id="content">
 <h3 id="address-lists:-cfas-or-pfas"><a href="#address-lists:-cfas-or-pfas">Address lists: cfa&rsquo;s or pfa&rsquo;s?</a></h3>
-<p>In my introduction to <a href="/threaded-code/">threaded code</a> I mentioned that colon word bodies consist of a list of cfa&rsquo;s (code field addresses), but that sometimes it makes sense to use pfa&rsquo;s instead. We are going to explore that theme here.</p>
+<p>In my introduction to <a href="/threaded-code/">threaded code</a> I mentioned that colon word bodies consist of a list of cfa&rsquo;s (code field addresses), but that sometimes it makes sense to use pfa&rsquo;s instead. We are going to explore that idea here.</p>
 <p>First, let&rsquo;s recap the definitions:</p>
 <p>The address of a code field is called, unsurprisingly, a <strong>code field address</strong> &ndash; usually abbreviated <strong>cfa</strong>.</p>
 <p>The address of a parameter field is called, also unsurprisingly, a <strong>parameter field address</strong> &ndash; usually abbreviated <strong>pfa</strong>.</p>
@@ -66,8 +66,8 @@
 <pre>
   mov pc, (ip)+
 </pre>
-<p>This does the auto-increment of IP and the jump to the fetched cfa, but leaves to the runtimes to figure out the pfa. This approach requires that code fields contain <em>calls</em> rather than <em>jumps</em> in order to &ldquo;capture&rdquo; the pfa somewhere (it gets pushed onto the machine&rsquo;s call stack).</p>
-<p>DTC doesn&rsquo;t offer a lot of wiggle room in this regard. Maybe ITC is better. Let&rsquo;s take a look.</p>
+<p>This does the auto-increment of IP and the jump to the fetched cfa, but leaves to the runtimes the computation of the pfa. This approach requires that code fields contain <em>calls</em> rather than <em>jumps</em> in order to &ldquo;capture&rdquo; the pfa somewhere (it gets pushed onto the machine&rsquo;s call stack).</p>
+<p>DTC doesn&rsquo;t offer a lot of wiggle room. Maybe ITC is better. Let&rsquo;s take a look.</p>
 <p>Here is ITC NEXT:</p>
 <pre>
   NEXT:  Fetch into W the address pointed to by IP
@@ -75,9 +75,9 @@
          Fetch into X the address pointed to by W
          Jump to X
 </pre>
-<p>As we did with DTC, let&rsquo;s start with the case where address lists contain cfa&rsquo;s. As above, the first step of NEXT loads a cfa into W. On a machine with auto-increment addressing we can have the &ldquo;Fetch into X&rdquo; step increment W so that when we get to NEST (or one of the other &ldquo;runtimes&rdquo;) W will contain the pfa.</p>
-<p>It might take an extra cycle (it does on the MSP430) but because in every case except executing a code word we will have to take at least a cycle to do arithmetic on W, it might make sense to auto-increment. (This is what I have done in the MSP430 ITC kernel.)</p>
-<p>If we don&rsquo;t have auto-increment (eg, most true RISC machines &ndash; ARM (excepting v6-M) doesn&rsquo;t count ;-) but can use a <em>negative offset</em> in our memory access instructions, then it makes sense to use pfa&rsquo;s in our address lists instead of cfa&rsquo;s. If we do this, the first step of NEXT loads W with a pfa, which is what we want. But the &ldquo;Fetch into X&rdquo; step needs to load from the cfa instead, so we offset <em>backwards</em> by the size of an address. This sounds convoluted, but it&rsquo;s actually the most efficient approach.</p>
+<p>As we did with DTC, let&rsquo;s start with the case where address lists contain cfa&rsquo;s. Just as with DTC NEXT, the first step of ITC NEXT loads a cfa into W. On a machine with auto-increment addressing we can have the &ldquo;Fetch into X&rdquo; step increment W so that when we get to NEST (or one of the other &ldquo;runtimes&rdquo;) W will contain the pfa.</p>
+<p>It might take an extra cycle (it does on the MSP430) but because in every case except executing a code word we will have to take at least a cycle to do arithmetic on W, it might make sense to auto-increment instead. It&rsquo;s also less error-prone to do it, correctly, in one place. (This is what I have done in the MSP430 ITC kernel.)</p>
+<p>If we <em>don&rsquo;t</em> have auto-increment (eg, most true RISC machines &ndash; ARM (excepting v6-M) doesn&rsquo;t count ;-) but can use a <em>negative offset</em> in our memory access instructions, then it makes sense to use pfa&rsquo;s in our address lists instead of cfa&rsquo;s. If we do this, the first step of NEXT loads W with a pfa, which is what we want. But the &ldquo;Fetch into X&rdquo; step needs to load from the cfa instead, so we offset <em>backwards</em> by the size of an address. This sounds convoluted, but it&rsquo;s actually the most efficient approach.</p>
 <p>Here is that version of ITC NEXT:</p>
 <pre>
   NEXT:  Fetch into W the address pointed to by IP (this is a pfa, not a cfa!)
@@ -92,7 +92,7 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code%3a%20Variations">Send feedback</a> on this page (last edited 2017 April 24 16:07)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code%3a%20Variations">Send feedback</a> on this page (last edited 2017 April 24 16:25)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code-variations%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>

@@ -43,7 +43,7 @@
              If the value is zero, execute (branch)
              Otherwise, increment IP by address size (skip branch address)
 </pre>
-<p>The <code class="forth">(branch</code>) above does an <em>absolute</em> branch. If you prefer relative branches, modify it thus:</p>
+<p>The <code class="forth">(branch)</code> above does an <em>absolute</em> branch. If you prefer relative branches, modify it thus:</p>
 <pre>
   (branch)   Fetch into W the address pointed to by IP
              Set IP to IP + W
@@ -65,7 +65,7 @@
 </pre>
 <p>The <code class="forth">;</code> adds the address of UNNEST at the end and ends the compilation.</p>
 <p>(This is getting outside the scope of our discussion, which is about the <em>execution machinery</em>, but in Forth systems <code class="forth">;</code> has <em>two</em> tasks: to compile the address of UNNEST, and to exit &ldquo;compilation mode&rdquo; &ndash; a special mode of <em>textual</em> interpretation that is the essence of the Forth compiler &ndash; and return to normal &ldquo;interpretation&rdquo; mode.)</p>
-<p>For if/then/else and looping we use <em>flag</em> values &ndash; truth values &ndash; that we compute and leave on the stack for <code class="forth">(0branch</code>) to test and consume.</p>
+<p>For if/then/else and looping we use <em>flag</em> values &ndash; truth values &ndash; that we compute and leave on the stack for <code class="forth">(0branch)</code> to test and consume.</p>
 <p>To make this even more concrete, let&rsquo;s add five more code words to our system:</p>
 <pre>
   &lt;       Pop two values off the data stack
@@ -97,7 +97,7 @@
           Execute NEXT
 </pre>
 <p>In many Forth systems -1 is the preferred &ldquo;true&rdquo; value because it is represented (on almost all machines!!) by an all-ones bit pattern, which can be logically ANDed with other values... but we digress. ;-)</p>
-<p>From our definition of <code class="forth">(0branch</code>) above it should be clear that <em>any</em> non-zero value is true, and only zero is false.</p>
+<p>From our definition of <code class="forth">(0branch)</code> above it should be clear that <em>any</em> non-zero value is true, and only zero is false.</p>
 <p>Let&rsquo;s write a simple loop. (There is a better, more efficient, and more idiomatic way to do this, but it is outside the scope of this example. ;-)</p>
 <pre>
   -8   begin  1 +  dup 0= until
@@ -116,7 +116,7 @@
   0024  ...
 </pre>
 <p>We have to <code class="forth">dup</code> the value before we test it with <code class="forth">0=</code> because <code class="forth">0=</code> <em>consumes</em> the value before pushing its true or false flag.</p>
-<p>The word <code class="forth">begin</code> compiles no code; it &ldquo;marks&rdquo; the location that <code class="forth">(0branch</code>) later branches back to.</p>
+<p>The word <code class="forth">begin</code> compiles no code; it &ldquo;marks&rdquo; the location that <code class="forth">(0branch)</code> later branches back to.</p>
 <p>I&rsquo;ve added memory addresses in hex (which assume a byte-addressed machine with 32-bit addresses) to make the branch destination easier to describe.</p>
 <p>We write if/then like this:</p>
 <pre>
@@ -151,14 +151,14 @@
   0024  address of +
   0028  ...
 </pre>
-<p><code class="forth">if</code> compiles the <code class="forth">(0branch</code>), <code class="forth">else</code> compiles the <code class="forth">(branch</code> and resolves the forward <code class="forth">(0branch</code>), and <code class="forth">then</code> resolves the forward <code class="forth">(branch</code>).</p>
-<p>Remember: <code class="forth">(0branch</code>) means branch if <em>false</em>.</p>
+<p><code class="forth">if</code> compiles the <code class="forth">(0branch)</code>, <code class="forth">else</code> compiles the <code class="forth">(branch)</code> and resolves the forward <code class="forth">(0branch)</code>, and <code class="forth">then</code> resolves the forward <code class="forth">(branch)</code>.</p>
+<p>Remember: <code class="forth">(0branch)</code> means branch if <em>false</em>.</p>
 
 </div>
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Loops%2c%20branches%2c%20and%20literals">Send feedback</a> on this page (last edited 2017 April 24 16:08)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Loops%2c%20branches%2c%20and%20literals">Send feedback</a> on this page (last edited 2017 April 24 16:28)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2floops-branches-and-literals%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
