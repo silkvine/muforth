@@ -90,7 +90,7 @@
   NEXT                  address n
                         address of UNNEST
 </pre>
-<p>When NEXT executes a leaf word, that &ldquo;Jump to W&rdquo; jumps directly to machine code. But when it executes a twig word, it jumps to a jump. We all know how terrible this is! Pipeline reload time!</p>
+<p>When NEXT executes a leaf word, that &ldquo;Jump to W&rdquo; jumps directly to machine code. But when it executes a twig word, it jumps to a jump. We all know how terrible this is! Pipeline refill time!</p>
 <p>What if we replaced this &ldquo;code indirection&rdquo; &ndash; a jump to a jump &ndash; with a <em>data</em> indirection?</p>
 <p>Enter...</p>
 <h3 id="indirect-threaded-code-itc"><a href="#indirect-threaded-code-itc">Indirect-threaded code (ITC)</a></h3>
@@ -154,7 +154,7 @@
 <p>In both cases &ndash; DTC and ITC &ndash; the representation consists of a code field and a parameter field &ndash; just like code and colon words. Whereas colon words have a code field that refers to NEST, constants have a code field that refers to CONSTANT, which looks like this:</p>
 <pre>
   CONSTANT: Add to W the size of the code field (calculate pfa)
-            Fetch value pointed to by W into W (fetch contents of parameter field)
+            Fetch value pointed to by W into W (fetch contents)
             Push W onto the data stack
             Execute NEXT
 </pre>
@@ -177,7 +177,7 @@
 <p>Here we have a variable called &ldquo;radix&rdquo; with the current value 2 (we are in binary).</p>
 <p>The code that all variables execute is remarkably similar to CONSTANT. Where CONSTANT pushed <em>value</em> stored in the parameter field, VARIABLE pushes the __address_ of the parameter field &ndash; the pfa.</p>
 <pre>
-  VARIABLE: Add to W the size of the code field (ie, calculate pfa)
+  VARIABLE: Add to W the size of the code field (calculate pfa)
             Push W onto the data stack (push pfa)
             Execute NEXT
 </pre>
@@ -206,12 +206,16 @@
 <p>Threaded code is an extraordinarily simple and elegant way to implement language interpreters. Compared to bytecoded interpreters it is quite fast, and compilers for it are essentially trivial.</p>
 <p>Because it creates a system entirely composed of uniform pieces, extensibility of the system by users is almost unlimited, and building generic tools is dramatically simplified!</p>
 <p>All this for a modest execution time penalty... ;-)</p>
+<h3 id="to-explore-further"><a href="#to-explore-further">To explore further</a></h3>
+<p>Read about <a href="/threaded-code-variations/">threaded code variations</a>. I talk about why sometimes it makes sense to put pfa&rsquo;s rather than cfa&rsquo;s into address lists (colon word bodies).</p>
+<p>Read about <a href="/threaded-code-literals-ifs-and-loops/">literals, ifs, and loops</a> in threaded code systems. I&rsquo;ve suggested here that all colon words consist of a list of addresses that are executed in sequence. Real code branches and loops. And uses literal numbers.</p>
+<p>Read about the <a href="/call-versus-branch-and-link/">difference between a &ldquo;call&rdquo; instruction and a &ldquo;branch-and-link&rdquo; instruction</a>, and how both relate to threaded code.</p>
 
 </div>
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 April 24 16:08)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code">Send feedback</a> on this page (last edited 2017 May 01 11:36)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
 <a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>

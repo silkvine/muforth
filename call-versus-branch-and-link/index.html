@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html 
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta name="copyright" content="All content on muforth.nimblemachines.com is copyrighted. All rights are reserved." />
+<meta name="keywords" content="subroutine call, call instruction, stack, branch-and-link, RISC, CISC, ARM, RISC-V" />
+<meta name="robots" content="index,follow" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/-/screen.css" type="text/css" />
+<link rel="canonical" href="http://muforth.nimblemachines.com/call-versus-branch-and-link/" />
+<title>Call versus branch-and-link &ndash; muforth</title>
+</head>
+<body>
+
+<div id="header">
+<h1>Call versus branch-and-link</h1>
+<hr />
+</div>
+
+<div id="content">
+<h3 id="whats-the-big-difference"><a href="#whats-the-big-difference">What&rsquo;s the big difference?</a></h3>
+<p>Years ago, while pondering the &ldquo;nature&rdquo; of threaded code something struck me: In a threaded code system the <em>called</em> routine decides whether or not to push a return address onto the call stack.</p>
+<p>This is in contrast to native code running on &ldquo;traditional&rdquo; architectures with &ldquo;call&rdquo; instructions. Call instructions <em>always</em> push the return address, even when it&rsquo;s unnecessary. (It&rsquo;s unnecessary when the code being is called is <em>leaf</em> routine &ndash; one that makes no further calls. But the caller doesn&rsquo;t &ndash; and can&rsquo;t! &ndash; know this.)</p>
+<p>RISC architects realized that always pushing the return address was inefficient &ndash; doing so creates unnecessary memory traffic &ndash; and instead of call instructions specified &ldquo;branch and link&rdquo; instructions.</p>
+<p>What&rsquo;s the difference?</p>
+<p>Operationally, a call instruction does two things:</p>
+<ul>
+<li>pushes onto the stack the address of the following instruction</li>
+<li>jumps to the destination</li>
+</ul>
+<p>A branch-and-link instruction &ndash; maybe it should be called link-and-branch? &ndash; also does two things:</p>
+<ul>
+<li>captures in a register (the &ldquo;link&rdquo; register) the address of the following instruction</li>
+<li>jumps to the destination</li>
+</ul>
+<p>If the <em>called</em> code is a leaf routine, it doesn&rsquo;t need to push the link register onto the stack. It is careful, however, to preserve its value; then, at exit, it returns to its caller by jumping to the address in the link register.</p>
+<p>If the called code <em>will</em> be making calls to other code, on entry it pushes the link register (to preserve it), and on exit it <em>first</em> pops and restores it, and then retuns to its caller as above, by jumping to the address in the register.</p>
+<h3 id="not-created-equal"><a href="#not-created-equal">Not created equal</a></h3>
+<p>There are two variations of branch-and-link:</p>
+<ul>
+<li>one that always uses the same link register (eg, ARM)</li>
+<li>one that allows specification of the link register (RISC-V, and probably others &ndash; I&rsquo;m not a RISC expert. ;-)</li>
+</ul>
+<p>The latter is much more powerful. If all your code does is &ldquo;normal&rdquo; calls and returns, the difference is unimportant. But there is a curious class of uses for which the difference is important: when using a branch-and-link to capture the following address for a purpose <em>other</em> than to return to it later.</p>
+<p>Say whaaaaat? Why would you ever do this?</p>
+<h3 id="creative-misuse"><a href="#creative-misuse">Creative misuse</a></h3>
+<p>I mentioned in my discussion of <a href="/threaded-code/">threaded code</a> that one can &ldquo;misuse&rdquo; a call instruction to capture the following address. This is sometimes useful when writing the &ldquo;runtime&rdquo; behaviours of Forth words. But using call in this way is inefficient: you capture the following address by pushing it, but then immediately pop it and do something with it.</p>
+<p>Misusing branch-and-link instructions to do the same thing is much more efficient. The address is captured in a register, and the code moves on. No push and pop. (There <em>is</em> a jump involved, so perhaps a pipeline refill occurs.)</p>
+<p>And if, for some reason, we want to do this twice, in immediate succession, we simply specify a different link register in each of the branch-and-links. (Hmm, and now we are perhaps doing <em>two</em> pipeline refills in quick succession...)</p>
+<p>But again, why?</p>
+<p>In a non-threaded implementation of Forth&rsquo;s create/does words, this is <em>precisely</em> what happens. I&rsquo;ll explain how this works by first showing how it works in a ITC (indirect-threaded code) system, and then replace some pointers with jump-and-link instructions.</p>
+<p>We&rsquo;ll look how three kinds of Forth words are represented: colon words, variables, and &ldquo;incrementers&rdquo; (which are going to be defined via create/does).</p>
+<p>Our example colon word was defined in Forth like this:</p>
+<pre>
+  : 4*   2* 2* ;
+</pre>
+<p>and its compiled form looks like this:</p>
+<pre>
+      4*
+  ~~~~~~~~~~~
+  addr of NEST    ( code field)
+  addr of 2*      ( parameter field)
+  addr of 2*
+  addr of UNNEST
+</pre>
+<p>Our variable looks like this:</p>
+<pre>
+     radix
+  ~~~~~~~~~~~
+  addr of VARIABLE    (code field)
+  2                   (parameter field)
+</pre>
+<p>And our create&rsquo;d word &ndash; the most complicated of our examples &ndash; was created by the following Forth code:</p>
+<pre>
+  : incr   create ,  does> @ + ;
+  4 incr cell+
+</pre>
+<p>To further complicate this example &ndash; which is really the <em>key</em> to my argument &ndash; we will assume a tethered cross-compiled Forth, which means that the words <code class="forth">create , does></code> execute on the host machine, and the target contains only the <em>runtime</em> pieces. <code class="forth">cell+</code> and <code class="forth">incr</code> look like this:</p>
+<pre>
+     cell+
+  +----------+
+  |   addr   |---+   ( code field)
+  +----------+   |
+  4              |   ( parameter field)
+                 |
+     incr        |
+  ~~~~~~~~~~~    |
+  jal DODOES   &lt;-+
+  addr of @
+  addr of +
+  addr of UNNEST
+</pre>
+<pre>
+  DODOES:  Push IP onto R stack
+           Push pfa onto D stack
+           Execute NEXT
+</pre>
+<p>Two notes about <code class="forth">incr</code>. It is <em>not</em> a normal Forth word with a code field and a parameter field. It is like the built-in &ldquo;runtimes&rdquo; for colon words or variables. In this case &ndash; unlike with VARIABLE or NEST &ndash; we want to express the runtime in <em>Forth</em> code rather than machine code. But runtimes have to <em>start</em> with machine code. And a <code class="forth">does></code> runtime has to do two things: nest the execution of Forth (just as we would do if we were calling a colon word), and push the pfa of the create&rsquo;d word (<code class="forth">cell+</code> in our example.)</p>
+<p>Since this behaviour is common to all <code class="forth">does></code> runtimes, we compile it <em>once</em> and <code>jal</code> to it.</p>
+<p>Thus, <code class="forth">incr</code> <em>begins</em> with <code>jal&nbsp;DODOES</code>. This is the <em>one</em> place in an ITC system where <em>code</em> specific to an architecture has to be compiled into a word&rsquo;s body. The Forth code in a parent (defining) word that specifies the execution behaviour of child words &ndash; ie, the code following <code class="forth">does></code> &ndash; has to be <em>prefixed</em> by machine code of some kind so that the code field in child words can point to it. Code fields <em>always</em> point to machine code.</p>
+<p>Now for the point of this exercise. Let&rsquo;s convert these three examples to &ldquo;native&rdquo; code, using jump-and-link instructions in the bodies of colon words instead of lists of pointers. Note that we use two different link registers: <code>w</code> in code fields, and <code>ra</code> in colon word bodies.</p>
+<pre>
+      4*
+  ~~~~~~~~~~~
+  jal  w NEST    (code field)
+  jal ra 2*      (parameter field)
+  jal ra 2*
+  jal ra UNNEST
+</pre>
+<p>NEST in this world changes slightly from the ITC version. Notice that the <code>jal&nbsp;w&nbsp;NEST</code> captures the pfa &ndash; which is the address of the first call to <code class="forth">2*</code> &ndash; in <code>w</code>. NEST now looks like this:</p>
+<pre>
+  NEST:  Push RA onto R stack
+         jr 0(w)
+</pre>
+<p>That <code>jr&nbsp;0(w)</code> means &ldquo;return to the body of the colon word and start executing the code there&rdquo;.</p>
+<p>Our variable looks like this:</p>
+<pre>
+     radix
+  ~~~~~~~~~~~
+  jal w VARIABLE    (code field)
+  2                 (parameter field)
+</pre>
+<p>Again, the <code>jal&nbsp;w&nbsp;VARIABLE</code> captures the pfa in <code>w</code>.</p>
+<p>Since there is one more level of &ldquo;nesting&rdquo; in <code class="forth">does></code> words, we need a <em>third</em> link register. Let&rsquo;s use x.</p>
+<pre>
+     cell+
+  ~~~~~~~~~~~
+  jal w INCR   (code field)
+  4            (parameter field)
+</pre>
+<pre>
+  INCR:  jal  x DODOES
+         jal ra @
+         jal ra +
+         jal ra UNNEST
+</pre>
+<pre>
+  DODOES:  Push RA onto R stack
+           Push W (pfa) onto D stack
+           jr 0(x)
+</pre>
+<p>The <code>jal&nbsp;w&nbsp;INCR</code> in <code class="forth">cell+</code> captures the pfa in <code>w</code>. The <code>jal&nbsp;x&nbsp;DODOES</code> in INCR captures the address of the Forth code that will be executed after W is pushed onto D stack. DODOES pushes both stacks, and then &ldquo;returns&rdquo; to the body of INCR.</p>
+<p>It&rsquo;s convoluted, and it&rsquo;s possibly inefficient &ndash; because we are executing <em>three</em> <code>jal</code> instructions in quick succession, and probably causing a series of pipeline refills &ndash; but it&rsquo;s very little code, and it&rsquo;s elegant in a twisted way. ;-)</p>
+
+</div>
+
+<div id="footer">
+<hr />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Call%20versus%20branch-and-link">Send feedback</a> on this page (last edited 2017 May 01 13:51)<br />
+Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
+<a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fcall-versus-branch-and-link%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
+</div>
+
+</body>
+</html>

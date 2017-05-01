@@ -9,13 +9,13 @@
 <meta name="robots" content="index,follow" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="/-/screen.css" type="text/css" />
-<link rel="canonical" href="http://muforth.nimblemachines.com/loops-branches-and-literals/" />
-<title>Loops, branches, and literals &ndash; muforth</title>
+<link rel="canonical" href="http://muforth.nimblemachines.com/threaded-code-literals-ifs-and-loops/" />
+<title>Threaded code: Literals, ifs, and loops &ndash; muforth</title>
 </head>
 <body>
 
 <div id="header">
-<h1>Loops, branches, and literals</h1>
+<h1>Threaded code: Literals, ifs, and loops</h1>
 <hr />
 </div>
 
@@ -104,16 +104,16 @@
 </pre>
 <p>This will get compiled to the following &ldquo;address list&rdquo;:</p>
 <pre>
-  0000  address of (lit)
-  0004  -8
-  0008  address of (lit)
-  000c  1
-  0010  address of +
-  0014  address of dup
-  0018  address of 0=
-  001c  address of (0branch)
-  0020  0008
-  0024  ...
+  00  address of (lit)
+  04  -8
+  08  address of (lit)
+  0c  1
+  10  address of +
+  14  address of dup
+  18  address of 0=
+  1c  address of (0branch)
+  20  08
+  24  ...
 </pre>
 <p>We have to <code class="forth">dup</code> the value before we test it with <code class="forth">0=</code> because <code class="forth">0=</code> <em>consumes</em> the value before pushing its true or false flag.</p>
 <p>The word <code class="forth">begin</code> compiles no code; it &ldquo;marks&rdquo; the location that <code class="forth">(0branch)</code> later branches back to.</p>
@@ -124,12 +124,12 @@
 </pre>
 <p>This compiles to the following:</p>
 <pre>
-  0000  address of 2dup
-  0004  address of &lt;
-  0008  address of (0branch)
-  000c  001c
-  0010  address of swap
-  001c  ...
+  00  address of 2dup
+  04  address of &lt;
+  08  address of (0branch)
+  0c  1c
+  10  address of swap
+  1c  ...
 </pre>
 <p>As before, we <code class="forth">2dup</code> the values because <code class="forth">&lt;</code> consumes them.</p>
 <p>Like <code class="forth">begin</code>, <code class="forth">then</code> compiles no code; it resolves the forward branch that <code class="forth">if</code> compiled. Words like if, then, begin, and until are called <em>compiling</em> words because they execute at compile time and do something special, like resolve a forward or backward branch address.</p>
@@ -139,17 +139,17 @@
 </pre>
 <p>This code compiles to:</p>
 <pre>
-  0000  address of 0=
-  0004  address of (0branch)
-  0008  001c
-  000c  address of (lit)
-  0010  4
-  0014  address of (branch)
-  0018  0024
-  001c  address of (lit)
-  0020  8
-  0024  address of +
-  0028  ...
+  00  address of 0=
+  04  address of (0branch)
+  08  1c
+  0c  address of (lit)
+  10  4
+  14  address of (branch)
+  18  24
+  1c  address of (lit)
+  20  8
+  24  address of +
+  28  ...
 </pre>
 <p><code class="forth">if</code> compiles the <code class="forth">(0branch)</code>, <code class="forth">else</code> compiles the <code class="forth">(branch)</code> and resolves the forward <code class="forth">(0branch)</code>, and <code class="forth">then</code> resolves the forward <code class="forth">(branch)</code>.</p>
 <p>Remember: <code class="forth">(0branch)</code> means branch if <em>false</em>.</p>
@@ -158,9 +158,9 @@
 
 <div id="footer">
 <hr />
-<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Loops%2c%20branches%2c%20and%20literals">Send feedback</a> on this page (last edited 2017 April 24 16:28)<br />
+<a href="mailto:%77%65%62%68%61%6d%73%74%65%72%40%6e%69%6d%62%6c%65%6d%61%63%68%69%6e%65%73%2e%63%6f%6d?subject=%5bmuforth%5d%20Threaded%20code%3a%20Literals%2c%20ifs%2c%20and%20loops">Send feedback</a> on this page (last edited 2017 May 01 11:38)<br />
 Browse <a href="/all-pages/">all pages</a>, or return <a href="/">home</a><br />
-<a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2floops-branches-and-literals%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
+<a href="https://twitter.com/share?url=http%3a%2f%2fmuforth.nimblemachines.com%2fthreaded-code-literals-ifs-and-loops%2f&text=Say%20something%20nice!">Tweet</a> this page, or follow <a href="https://twitter.com/muforth">@muforth</a>
 </div>
 
 </body>
