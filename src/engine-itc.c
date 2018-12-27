@@ -1,5 +1,5 @@
 /*
- * This file is part of muforth: http://muforth.nimblemachines.com/
+ * This file is part of muforth: https://muforth.nimblemachines.com/
  *
  * Copyright (c) 2002-2018 David Frech. (Read the LICENSE for details.)
  */
@@ -68,14 +68,17 @@ static void mu_do_does()
     PUSH_ADDR(&W[2]);           /* push the address of the word's body */
 }
 
-void mu_set_colon_code() { *ph++ = (addr)&mu_do_colon; }
-void mu_set_does_code()  { *ph++ = (addr)&mu_do_does; }
+void mu_set_colon_code() { PUSH_ADDR(&mu_do_colon); mu_comma(); }
+void mu_set_does_code()  { PUSH_ADDR(&mu_do_does);  mu_comma(); }
 
 /* Normal exit */
 void mu_runtime_exit()      { UNNEST; }
 
 /* Push an inline literal */
 void mu_runtime_lit_()  { PUSH(*(cell *)IP++); }
+
+/* Compile the following word */
+void mu_runtime_compile()  { mu_runtime_lit_(); mu_comma(); }
 
 
 /*

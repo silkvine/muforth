@@ -1,4 +1,4 @@
-( This file is part of muforth: http://muforth.nimblemachines.com/
+( This file is part of muforth: https://muforth.nimblemachines.com/
 
   Copyright 2002-2018 David Frech. (Read the LICENSE for details.)
 
@@ -254,8 +254,9 @@ forth
   explain. ;-)
 
 meta
-: meta:     current preserve  meta     :  __definer-colon ;
-: definer:  current preserve  definer  :  __definer-colon ;
+: meta:      current preserve  meta     :  __definer-colon ;
+: definer:   current preserve  definer  :  __definer-colon ;
+: compiler:  current preserve  target-compiler  :  __definer-colon ;
 forth
 
 

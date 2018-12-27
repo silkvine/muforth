@@ -1,4 +1,4 @@
-( This file is part of muforth: http://muforth.nimblemachines.com/
+( This file is part of muforth: https://muforth.nimblemachines.com/
 
   Copyright 2002-2018 David Frech. (Read the LICENSE for details.)
 
@@ -34,7 +34,7 @@ forth
    15 and  3 *
    z" w  x  y  z  r4 rp ip topr8 up r10r11r12sp lr pc " +  3 -trailing type ;
 
-: forth-regs  [ ] is .reg ;  forth-regs
+: forth-regs  [ #] is .reg ;  forth-regs
 
 -- ------------------------------------------------------------------------
 -- Signatures - how we built the target image 
